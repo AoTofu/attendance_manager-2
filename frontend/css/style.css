@@ -1,0 +1,100 @@
+body {
+    font-family: sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+#app-container {
+    width: 95%;
+    max-width: 1200px;
+    min-height: 90vh;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+}
+h1 { color: #444; }
+h2 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+
+/* --- フォーム関連 --- */
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 5px; font-weight: bold; }
+input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 1em;
+}
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+.form-group-checkbox { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+
+/* --- メッセージ表示 --- */
+.error-message { color: #d9534f; margin-bottom: 10px; font-weight: bold; }
+.message { margin-top: 15px; padding: 10px; border-radius: 4px; }
+.message.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+.message.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+
+/* --- ヘッダー --- */
+.main-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+.time-display { font-size: 1.5em; font-weight: bold; color: #555; }
+
+/* --- 各ビューのレイアウト --- */
+.view { display: none; /* デフォルトは非表示 */ }
+
+#login-view {
+    display: block; /* 最初だけblock */
+    max-width: 400px;
+    margin: 80px auto;
+}
+
+#main-view {
+    display: none;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#admin-view {
+    display: none;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* --- パネル共通スタイル --- */
+.panel { border: 1px solid #ddd; border-radius: 8px; padding: 20px; background-color: #fdfdfd; }
+.dashboard { display: flex; flex-direction: column; gap: 30px; }
+
+/* --- メイン画面のボタンなど --- */
+.action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.attendance-btn { padding: 20px; font-size: 1.2em; }
+.status-message { margin-top: 20px; font-size: 1.2em; font-weight: bold; text-align: center; padding: 10px; background-color: #e9ecef; border-radius: 4px; }
+#btn-goto-admin { width: 100%; padding: 15px; background-color: #28a745; }
+#btn-goto-admin:hover { background-color: #218838; }
+
+/* --- 管理者画面のレイアウト --- */
+.admin-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+.statistics-controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+.summary-box { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; line-height: 1.6; }
+.chart-container { position: relative; height: 350px; }
+#employee-table { width: 100%; border-collapse: collapse; }
+#employee-table th, #employee-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+#employee-table th { background-color: #f2f2f2; }
+#btn-back-to-main { background-color: #6c757d; }
+#btn-back-to-main:hover { background-color: #5a6268; }
