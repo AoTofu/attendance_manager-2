@@ -84,21 +84,29 @@
             </header>
             
             <div class="panel">
-                <h2>イベントカレンダー (クリックしてイベント追加)</h2>
-                <div id="admin-calendar-container">
-                    <div id="admin-calendar-header">
-                        <button id="admin-prev-month-btn">&lt;</button>
-                        <h3 id="admin-calendar-year-month">2025年 7月</h3>
-                        <button id="admin-next-month-btn">&gt;</button>
+                <h2>イベント管理</h2>
+                <div id="admin-event-manager" class="two-column-layout">
+
+                    <div id="admin-calendar-wrapper">
+                        <div class="calendar-header">
+                            <button id="admin-prev-month-btn">&lt;</button>
+                            <h3 id="admin-calendar-year-month"></h3>
+                            <button id="admin-next-month-btn">&gt;</button>
+                        </div>
+                        <table class="calendar-table">
+                            <thead>
+                                <tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr>
+                            </thead>
+                            <tbody id="admin-calendar-body"></tbody>
+                        </table>
                     </div>
-                    <table id="admin-calendar-table">
-                        <thead>
-                            <tr>
-                                <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-calendar-body"></tbody>
-                    </table>
+
+                    <div id="daily-events-panel">
+                        <h3 id="daily-events-date">日付にカーソルを合わせてください</h3>
+                        <div id="daily-events-list">
+                            </div>
+                    </div>
+
                 </div>
             </div>
             <div class="panel">
