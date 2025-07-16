@@ -84,6 +84,24 @@
             </header>
             
             <div class="panel">
+                <h2>イベントカレンダー (クリックしてイベント追加)</h2>
+                <div id="admin-calendar-container">
+                    <div id="admin-calendar-header">
+                        <button id="admin-prev-month-btn">&lt;</button>
+                        <h3 id="admin-calendar-year-month">2025年 7月</h3>
+                        <button id="admin-next-month-btn">&gt;</button>
+                    </div>
+                    <table id="admin-calendar-table">
+                        <thead>
+                            <tr>
+                                <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-calendar-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="panel">
                 <h2>勤怠データ集計</h2>
                 <div id="statistics-controls" class="statistics-controls-grid">
                     <div class="form-group">
@@ -148,6 +166,38 @@
                     <div id="add-employee-message" class="message"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="event-modal-overlay" style="display: none;">
+        <div id="event-modal-content">
+            <h2 id="event-modal-title">イベントを追加</h2>
+            <form id="event-form">
+                <div class="form-group">
+                    <label for="event-title">タイトル</label>
+                    <input type="text" id="event-title" required>
+                </div>
+                <div class="form-group-checkbox">
+                    <input type="checkbox" id="event-allday">
+                    <label for="event-allday">終日</label>
+                </div>
+                <div class="form-group">
+                    <label for="event-start">開始日時</label>
+                    <input type="datetime-local" id="event-start" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-end">終了日時</label>
+                    <input type="datetime-local" id="event-end" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-description">説明</label>
+                    <textarea id="event-description" rows="3"></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit">保存</button>
+                    <button type="button" id="event-cancel-btn">キャンセル</button>
+                </div>
+            </form>
         </div>
     </div>
     <script src="js/main.js"></script>
