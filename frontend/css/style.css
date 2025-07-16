@@ -148,7 +148,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     border: 1px solid #ddd;
     border-radius: 8px;
 }
-#calendar-header {
+.calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
