@@ -103,9 +103,25 @@ function initializeLoginView() {
 // --- 管理者画面関連 ---
 function initializeAdminView() {
     currentAdminCalendarDate = new Date();
-    generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true });
+    refreshAdminCalendarAndList(currentAdminCalendarDate);
     if (dailyEventsDateEl) dailyEventsDateEl.textContent = '日付にカーソルを合わせてください';
     if (dailyEventsListEl) dailyEventsListEl.innerHTML = '';
+}
+
+/**
+ * 管理者画面のデータを再取得し、カレンダーとリストを再描画する
+ */
+function refreshAdminCalendarAndList(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    return window.pywebview.api.get_events_for_month(year, month).then(result => {
+        adminMonthlyEvents = result.success ? result.events : [];
+
+        // 新しいデータでカレンダーとリストの両方を再描画
+        drawAdminCalendar(date, adminMonthlyEvents);
+        renderEventListView(adminMonthlyEvents);
+    });
 }
 
 function displayDailyEvents(dateString) {
@@ -232,8 +248,7 @@ function handleSaveEvent(e) {
     apiCall.then(result => {
         if (result.success) {
             closeEventModal();
-            generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true })
-                .then(() => renderEventListView());
+            refreshAdminCalendarAndList(currentAdminCalendarDate);
         } else {
             alert('エラー: ' + result.message);
         }
@@ -251,8 +266,7 @@ function handleDeleteEvent(eventId) {
     if (confirm('このイベントを本当に削除しますか？')) {
         window.pywebview.api.delete_event(eventId).then(result => {
             if (result.success) {
-                generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true })
-                    .then(() => renderEventListView());
+                refreshAdminCalendarAndList(currentAdminCalendarDate);
             } else {
                 alert('削除に失敗しました: ' + result.message);
             }
@@ -260,10 +274,64 @@ function handleDeleteEvent(eventId) {
     }
 }
 
+// --- カレンダー描画関数 ---
+function drawAdminCalendar(date, events) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    document.getElementById('admin-calendar-year-month').textContent = `${year}年 ${month + 1}月`;
+    const calendarBody = document.getElementById('admin-calendar-body');
+    calendarBody.innerHTML = '';
 
-// --- 共通カレンダー生成 ---
+    const firstDay = new Date(year, month, 1);
+    let tempDate = new Date(firstDay);
+    tempDate.setDate(tempDate.getDate() - firstDay.getDay());
+
+    for (let week = 0; week < 6; week++) {
+        let weekRow = document.createElement('tr');
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+            let dayCell = document.createElement('td');
+            const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
+
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = tempDate.getDate();
+            dayCell.appendChild(dateSpan);
+
+            if (tempDate.getMonth() === month) {
+                dayCell.dataset.date = dateString;
+                if (dayOfWeek === 0) dayCell.classList.add('sunday');
+                if (dayOfWeek === 6) dayCell.classList.add('saturday');
+                if (tempDate.toDateString() === new Date().toDateString()) {
+                    dateSpan.classList.add('today');
+                }
+
+                const dayEvents = events.filter(e => {
+                    const eventStart = new Date(e.start_datetime.split(' ')[0]);
+                    const eventEnd = new Date(e.end_datetime.split(' ')[0]);
+                    return tempDate >= eventStart && tempDate <= eventEnd;
+                });
+
+                if (dayEvents.length > 0) {
+                    const eventPlaceholder = document.createElement('div');
+                    dayEvents.slice(0, 2).forEach(event => {
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = 'calendar-event';
+                        eventDiv.textContent = event.title;
+                        eventPlaceholder.appendChild(eventDiv);
+                    });
+                    dayCell.appendChild(eventPlaceholder);
+                }
+            } else {
+                dayCell.classList.add('other-month');
+            }
+            weekRow.appendChild(dayCell);
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+        calendarBody.appendChild(weekRow);
+    }
+}
+
 function generateCalendar(options) {
-    const { date, bodyId, isAdmin, yearMonthId } = options;
+    const { date, bodyId, yearMonthId } = options;
     const year = date.getFullYear();
     const month = date.getMonth();
 
@@ -274,56 +342,7 @@ function generateCalendar(options) {
     return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
         calendarBody.innerHTML = '';
         const events = result.success ? result.events : [];
-        if (isAdmin) {
-            adminMonthlyEvents = events;
-        }
-
-        const firstDay = new Date(year, month, 1);
-        let tempDate = new Date(firstDay);
-        tempDate.setDate(tempDate.getDate() - firstDay.getDay());
-
-        for (let week = 0; week < 6; week++) {
-            let weekRow = document.createElement('tr');
-            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
-                let dayCell = document.createElement('td');
-                const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
-
-                const dateSpan = document.createElement('span');
-                dateSpan.textContent = tempDate.getDate();
-                dayCell.appendChild(dateSpan);
-
-                if (tempDate.getMonth() === month) {
-                    dayCell.dataset.date = dateString;
-                    if (dayOfWeek === 0) dayCell.classList.add('sunday');
-                    if (dayOfWeek === 6) dayCell.classList.add('saturday');
-                    if (tempDate.toDateString() === new Date().toDateString()) {
-                        dateSpan.classList.add('today');
-                    }
-
-                    const dayEvents = events.filter(e => {
-                        const eventStart = new Date(e.start_datetime.split(' ')[0]);
-                        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
-                        return tempDate >= eventStart && tempDate <= eventEnd;
-                    });
-
-                    if (dayEvents.length > 0) {
-                        const eventPlaceholder = document.createElement('div');
-                        dayEvents.slice(0, 2).forEach(event => {
-                            const eventDiv = document.createElement('div');
-                            eventDiv.className = 'calendar-event';
-                            eventDiv.textContent = event.title;
-                            eventPlaceholder.appendChild(eventDiv);
-                        });
-                        dayCell.appendChild(eventPlaceholder);
-                    }
-                } else {
-                    dayCell.classList.add('other-month');
-                }
-                weekRow.appendChild(dayCell);
-                tempDate.setDate(tempDate.getDate() + 1);
-            }
-            calendarBody.appendChild(weekRow);
-        }
+        drawAdminCalendar(date, events); // 描画ロジックを再利用
     });
 }
 
@@ -587,11 +606,11 @@ window.addEventListener('pywebviewready', () => {
     });
     document.getElementById('admin-prev-month-btn').addEventListener('click', () => {
         currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() - 1);
-        generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true });
+        refreshAdminCalendarAndList(currentAdminCalendarDate);
     });
     document.getElementById('admin-next-month-btn').addEventListener('click', () => {
         currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() + 1);
-        generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true });
+        refreshAdminCalendarAndList(currentAdminCalendarDate);
     });
 
     // イベントモーダル
@@ -602,14 +621,12 @@ window.addEventListener('pywebviewready', () => {
         const startInput = document.getElementById('event-start');
         const endInput = document.getElementById('event-end');
 
-        // 日付部分を保持
         const startDate = startInput.value.slice(0, 10);
         const endDate = endInput.value.slice(0, 10);
 
         startInput.type = isChecked ? 'date' : 'datetime-local';
         endInput.type = isChecked ? 'date' : 'datetime-local';
 
-        // 値を再設定
         if (isChecked) {
             startInput.value = startDate;
             endInput.value = endDate;
