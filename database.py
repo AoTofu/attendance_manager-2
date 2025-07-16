@@ -37,6 +37,21 @@ def create_tables():
             FOREIGN KEY (employee_id) REFERENCES employees (id)
         )
     ''')
+
+    # ▼▼▼ 追加 ▼▼▼
+    # eventsテーブル
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            start_datetime TEXT NOT NULL,
+            end_datetime TEXT NOT NULL,
+            is_allday INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # ▲▲▲ 追加 ▲▲▲
     
     print("テーブルの準備ができました。")
     conn.commit()
@@ -50,7 +65,10 @@ def initialize_database():
         # --- 初回管理者ユーザーの作成 ---
         create_initial_admin()
     else:
+        # 既存DBの場合でもテーブルの存在確認は毎回行う
+        create_tables()
         print(f"{DB_FILE} は既に存在します。")
+
 
 def create_initial_admin():
     """アプリケーション初回起動時に管理者ユーザーを作成する"""
@@ -61,8 +79,6 @@ def create_initial_admin():
     cursor.execute("SELECT id FROM employees WHERE is_admin = 1")
     if cursor.fetchone() is None:
         print("管理者ユーザーが存在しないため、初期管理者を作成します。")
-        # ここでパスワードをハッシュ化
-        # 重要：'admin_password' は実際の初期パスワードに置き換えてください
         hashed_password = generate_password_hash('admin_password', method='pbkdf2:sha256')
         
         cursor.execute(
