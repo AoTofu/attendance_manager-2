@@ -192,6 +192,38 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 }
 /* ▲▲▲ ここまで修正 ▲▲▲ */
 
+/* ▼▼▼ カレンダーの見た目改善用のスタイルを追加 ▼▼▼ */
+#calendar-table td.saturday span,
+#admin-calendar-body td.saturday span {
+    color: #007bff; /* 土曜日を青色に */
+}
+
+#calendar-table td.sunday span,
+#admin-calendar-body td.sunday span {
+    color: #d9534f; /* 日曜日を赤色に */
+}
+
+/* 前月・翌月の日付 */
+#calendar-table td.other-month,
+#admin-calendar-body td.other-month {
+    color: #ccc;
+}
+
+/* ホバー効果 */
+#calendar-table td:hover,
+#admin-calendar-body td:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+/* ホバー対象外の日付 */
+#calendar-table td.other-month:hover,
+#admin-calendar-body td.other-month:hover {
+    background-color: transparent;
+    cursor: default;
+}
+/* ▲▲▲ スタイルを追加 ▲▲▲ 
+
 #calendar-table td .event-placeholder {
     margin-top: 5px;
     font-size: 0.8em;

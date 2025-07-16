@@ -73,13 +73,13 @@ function generateCalendar(options) {
     document.getElementById(yearMonthId).textContent = `${year}年 ${month + 1}月`;
 
     const calendarBody = document.getElementById(bodyId);
-    calendarBody.innerHTML = ''; // 中身をクリア
+    calendarBody.innerHTML = '';
 
     // 月のイベントを取得
     window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
         const events = result.success ? result.events : [];
         if(isAdmin) {
-            adminMonthlyEvents = events; // 管理者画面の場合はイベントをキャッシュ
+            adminMonthlyEvents = events;
         }
         
         // カレンダーの描画
@@ -88,20 +88,30 @@ function generateCalendar(options) {
         let tempDate = new Date(firstDay);
         tempDate.setDate(tempDate.getDate() - firstDay.getDay());
 
-        while (tempDate <= lastDay || tempDate.getDay() !== 0) {
+        // 6週間分 (42日) のセルを生成
+        for (let week = 0; week < 6; week++) {
             let weekRow = document.createElement('tr');
-            for (let i = 0; i < 7; i++) {
+            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
                 let dayCell = document.createElement('td');
-                if (tempDate.getMonth() === month) {
-                    const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
-                    dayCell.dataset.date = dateString; // YYYY-MM-DD形式のデータを埋め込む
+                const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = tempDate.getDate();
+                dayCell.appendChild(dateSpan);
 
-                    const dateSpan = document.createElement('span');
-                    dateSpan.textContent = tempDate.getDate();
+                // ▼▼▼ ここからロジックを修正・追加 ▼▼▼
+                if (tempDate.getMonth() === month) {
+                    // --- 当月の日付の処理 ---
+                    dayCell.dataset.date = dateString;
+
+                    // 土日のクラス設定
+                    if (dayOfWeek === 0) dayCell.classList.add('sunday');
+                    if (dayOfWeek === 6) dayCell.classList.add('saturday');
+
+                    // 今日のクラス設定
                     if (tempDate.toDateString() === new Date().toDateString()) {
                         dateSpan.classList.add('today');
                     }
-                    dayCell.appendChild(dateSpan);
                     
                     // イベントの表示
                     const dayEvents = events.filter(e => {
@@ -120,12 +130,16 @@ function generateCalendar(options) {
                         });
                         dayCell.appendChild(eventPlaceholder);
                     }
+                } else {
+                    // --- 前月・翌月の日付の処理 ---
+                    dayCell.classList.add('other-month');
                 }
+                // ▲▲▲ ロジックを修正・追加 ▲▲▲
+
                 weekRow.appendChild(dayCell);
                 tempDate.setDate(tempDate.getDate() + 1);
             }
             calendarBody.appendChild(weekRow);
-            if (tempDate.getMonth() > month && tempDate.getFullYear() >= year) break;
         }
     });
 }
