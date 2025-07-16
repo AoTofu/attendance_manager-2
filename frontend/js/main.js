@@ -108,19 +108,14 @@ function initializeAdminView() {
     if (dailyEventsListEl) dailyEventsListEl.innerHTML = '';
 }
 
-/**
- * 管理者画面のデータを再取得し、カレンダーとリストを再描画する
- */
 function refreshAdminCalendarAndList(date) {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
 
     return window.pywebview.api.get_events_for_month(year, month).then(result => {
         adminMonthlyEvents = result.success ? result.events : [];
-
-        // 新しいデータでカレンダーとリストの両方を再描画
-        drawAdminCalendar(date, adminMonthlyEvents);
-        renderEventListView(adminMonthlyEvents);
+        drawCalendarGrid({ date: date, events: adminMonthlyEvents, bodyId: 'admin-calendar-body', isAdmin: true });
+        renderEventListView();
     });
 }
 
@@ -274,12 +269,14 @@ function handleDeleteEvent(eventId) {
     }
 }
 
+
 // --- カレンダー描画関数 ---
-function drawAdminCalendar(date, events) {
+function drawCalendarGrid(options) {
+    const { date, events, bodyId, isAdmin } = options;
     const year = date.getFullYear();
     const month = date.getMonth();
-    document.getElementById('admin-calendar-year-month').textContent = `${year}年 ${month + 1}月`;
-    const calendarBody = document.getElementById('admin-calendar-body');
+
+    const calendarBody = document.getElementById(bodyId);
     calendarBody.innerHTML = '';
 
     const firstDay = new Date(year, month, 1);
@@ -331,7 +328,7 @@ function drawAdminCalendar(date, events) {
 }
 
 function generateCalendar(options) {
-    const { date, bodyId, yearMonthId } = options;
+    const { date, bodyId, yearMonthId, isAdmin } = options;
     const year = date.getFullYear();
     const month = date.getMonth();
 
@@ -340,9 +337,11 @@ function generateCalendar(options) {
     calendarBody.innerHTML = '<tr><td colspan="7">読み込み中...</td></tr>';
 
     return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
-        calendarBody.innerHTML = '';
         const events = result.success ? result.events : [];
-        drawAdminCalendar(date, events); // 描画ロジックを再利用
+        if (isAdmin) {
+            adminMonthlyEvents = events;
+        }
+        drawCalendarGrid({ date, events, bodyId, isAdmin });
     });
 }
 
