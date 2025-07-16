@@ -55,6 +55,15 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 /* --- ヘッダー --- */
 .main-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
 .time-display { font-size: 1.5em; font-weight: bold; color: #555; }
+.header-controls { display: flex; align-items: center; gap: 20px; }
+#btn-logout {
+    background-color: #6c757d; /* グレー系の色 */
+    font-size: 0.9em;
+    padding: 8px 12px;
+}
+#btn-logout:hover {
+    background-color: #5a6268;
+}
 
 /* --- 各ビューのレイアウト --- */
 .view { display: none; /* デフォルトは非表示 */ }
