@@ -181,11 +181,19 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     background-color: #007bff;
     color: white;
     font-weight: bold;
-    border-radius: 50%;
+    border-radius: 15px; /* 少し小さく調整 */
+    padding: 5px; /* 内側の余白を追加 */
+    display: inline-block; /* 内容に合わせてサイズが変わるように */
+    min-width: 25px; /* 最小幅を設定 */
+    text-align: center; /* テキストを中央に配置 */
+    line-height: 1; /* 行の高さを調整 */
+    font-size: 0.9em; /* フォントサイズを調整 */
 }
-#calendar-table td .event-placeholder {
-    margin-top: 5px;
-    font-size: 0.8em;
-    /* 将来予定を表示するスペース */
+#calendar-table td {
+    height: auto; /* 高さを自動調整 */
+    vertical-align: top;
+    padding-top: 5px;
+    font-size: 0.9em;
+    padding-bottom: 10px; /* 下のpaddingも調整 */
 }
 /* ▲▲▲ カレンダー用のスタイルを追加 ▲▲▲ */
