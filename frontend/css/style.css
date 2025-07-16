@@ -244,4 +244,59 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/* ▲▲▲ スタイルを追加 ▲▲▲ 
+/* ▲▲▲ スタイルを追加 ▲▲▲ */
+
+/* ▼▼▼ 管理者画面イベント管理パネル用のスタイルを追加 ▼▼▼ */
+#admin-event-manager {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr; /* 左(カレンダー)を少し広めに */
+    gap: 25px;
+}
+
+#daily-events-panel {
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #fdfdfd;
+    overflow-y: auto; /* イベントが多い場合にスクロール */
+    max-height: 500px; /* パネルの高さをカレンダーに合わせる */
+}
+
+#daily-events-panel h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.daily-event-item {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.daily-event-item:last-child {
+    border-bottom: none;
+}
+
+.daily-event-item .title {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.daily-event-item .time {
+    font-size: 0.9em;
+    color: #555;
+    margin: 4px 0;
+}
+
+.daily-event-item .description {
+    font-size: 0.9em;
+    color: #666;
+    white-space: pre-wrap; /* 改行を反映 */
+}
+
+#daily-events-list .no-events {
+    color: #888;
+}
+/* ▲▲▲ スタイルを追加 ▲▲▲
