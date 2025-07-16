@@ -162,38 +162,28 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     border-collapse: collapse;
     table-layout: fixed;
 }
-#calendar-table th, #calendar-table td {
-    text-align: center;
-    padding: 10px 0;
+#calendar-table td {
+    text-align: center; /* セルの中身を中央揃え */
+    vertical-align: top;
+    height: 60px;
+    padding-top: 5px;
     border: 1px solid #eee;
 }
-#calendar-table th {
-    font-weight: normal;
-    background-color: #f8f9fa;
-}
-#calendar-table td {
-    height: 60px;
-    vertical-align: top;
-    padding-top: 5px;
-    font-size: 0.9em;
-}
-#calendar-table td.today {
+
+/* span.today のスタイルを定義 */
+#calendar-table .today {
+    display: inline-block;
+    width: 2em;
+    height: 2em;
+    line-height: 2em; /* 数字を円の縦中央に配置 */
+    border-radius: 50%; /* 円形にする */
     background-color: #007bff;
     color: white;
     font-weight: bold;
-    border-radius: 15px; /* 少し小さく調整 */
-    padding: 5px; /* 内側の余白を追加 */
-    display: inline-block; /* 内容に合わせてサイズが変わるように */
-    min-width: 25px; /* 最小幅を設定 */
-    text-align: center; /* テキストを中央に配置 */
-    line-height: 1; /* 行の高さを調整 */
-    font-size: 0.9em; /* フォントサイズを調整 */
 }
-#calendar-table td {
-    height: auto; /* 高さを自動調整 */
-    vertical-align: top;
-    padding-top: 5px;
-    font-size: 0.9em;
-    padding-bottom: 10px; /* 下のpaddingも調整 */
+/* ▲▲▲ ここまで修正 ▲▲▲ */
+
+#calendar-table td .event-placeholder {
+    margin-top: 5px;
+    font-size: 0.8em;
 }
-/* ▲▲▲ カレンダー用のスタイルを追加 ▲▲▲ */

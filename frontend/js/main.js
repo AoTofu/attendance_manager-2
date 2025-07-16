@@ -85,14 +85,20 @@ function generateCalendar(date) {
         for (let i = 0; i < 7; i++) {
             let dayCell = document.createElement('td');
             if (currentDate.getMonth() === month) {
-                dayCell.textContent = currentDate.getDate();
+                
+                // ▼▼▼ ここから修正 ▼▼▼
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = currentDate.getDate();
 
                 if (currentDate.getFullYear() === today.getFullYear() &&
                     currentDate.getMonth() === today.getMonth() &&
                     currentDate.getDate() === today.getDate()) {
-                    dayCell.classList.add('today');
+                    // classを<td>ではなく<span>に付ける
+                    dateSpan.classList.add('today'); 
                 }
-                
+                dayCell.appendChild(dateSpan); // <td> の中に <span> を追加
+                // ▲▲▲ ここまで修正 ▲▲▲
+
                 // 将来の予定表示用のプレースホルダー
                 const eventDiv = document.createElement('div');
                 eventDiv.className = 'event-placeholder';
