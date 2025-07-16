@@ -1,5 +1,6 @@
 let currentUser = null;
 let timeInterval = null;
+let eventListViewEl = null;
 let attendanceChart = null;
 
 let isMainViewInitialized = false;
@@ -76,7 +77,7 @@ function generateCalendar(options) {
     calendarBody.innerHTML = '';
 
     // 月のイベントを取得
-    window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
+    return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
         const events = result.success ? result.events : [];
         if(isAdmin) {
             adminMonthlyEvents = events;
@@ -157,48 +158,24 @@ function initializeLoginView() {
     });
 }
 
-function initializeAdminView() {
-    currentAdminCalendarDate = new Date();
-    generateCalendar({
-        date: currentAdminCalendarDate,
-        bodyId: 'admin-calendar-body',
-        yearMonthId: 'admin-calendar-year-month',
-        isAdmin: true
-    });
-    dailyEventsDateEl.textContent = '日付にカーソルを合わせてください';
-    dailyEventsListEl.innerHTML = '';
+function handleEditEvent(eventId) {
+    const event = adminMonthlyEvents.find(e => e.id == eventId);
+    if(event) {
+        openEventModal(event);
+    }
 }
 
-// ▼▼▼ 新しいイベント処理関数 ▼▼▼
-function openEventModal(dateString) {
-    eventForm.reset();
-    document.getElementById('event-start').value = dateString + 'T09:00';
-    document.getElementById('event-end').value = dateString + 'T10:00';
-    eventModalOverlay.style.display = 'flex';
-}
-
-function closeEventModal() {
-    eventModalOverlay.style.display = 'none';
-}
-
-function handleSaveEvent(e) {
-    e.preventDefault();
-    const title = document.getElementById('event-title').value;
-    const description = document.getElementById('event-description').value;
-    const startStr = document.getElementById('event-start').value.replace('T', ' ') + ':00';
-    const endStr = document.getElementById('event-end').value.replace('T', ' ') + ':00';
-    const isAllday = document.getElementById('event-allday').checked;
-
-    window.pywebview.api.add_event(title, description, startStr, endStr, isAllday).then(result => {
-        if (result.success) {
-            closeEventModal();
-            // 両方のカレンダーを再描画
-            generateCalendar({date: currentCalendarDate, bodyId: 'calendar-body', yearMonthId: 'calendar-year-month', isAdmin: false});
-            generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
-        } else {
-            alert('エラー: ' + result.message);
-        }
-    });
+function handleDeleteEvent(eventId) {
+    if(confirm('このイベントを本当に削除しますか？')) {
+        window.pywebview.api.delete_event(eventId).then(result => {
+            if(result.success) {
+                generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
+                renderEventListView();
+            } else {
+                alert('削除に失敗しました: ' + result.message);
+            }
+        });
+    }
 }
 
 function displayDailyEvents(dateString) {
@@ -228,12 +205,60 @@ function displayDailyEvents(dateString) {
         const startTime = event.is_allday ? '終日' : new Date(event.start_datetime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
         
         item.innerHTML = `
+            <div class="actions">
+                <button class="edit-btn" data-event-id="${event.id}">編集</button>
+                <button class="delete-btn" data-event-id="${event.id}">削除</button>
+            </div>
             <div class="title">${event.title}</div>
             <div class="time">${startTime}</div>
             <div class="description">${event.description || ''}</div>
         `;
         dailyEventsListEl.appendChild(item);
     });
+}
+
+function renderEventListView() {
+    eventListViewEl.innerHTML = '';
+    if (adminMonthlyEvents.length === 0) {
+        eventListViewEl.innerHTML = '<p class="no-events">この月のイベントはありません。</p>';
+        return;
+    }
+    
+    // 日付順にソート
+    const sortedEvents = [...adminMonthlyEvents].sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
+
+    sortedEvents.forEach(event => {
+        const item = document.createElement('div');
+        item.className = 'list-event-item';
+        const date = new Date(event.start_datetime).toLocaleDateString('ja-JP');
+        const time = event.is_allday ? '終日' : new Date(event.start_datetime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+        item.innerHTML = `
+            <div class="info">
+                <strong>${date} (${time})</strong> - ${event.title}
+            </div>
+            <div class="actions">
+                <button class="edit-btn" data-event-id="${event.id}">編集</button>
+                <button class="delete-btn" data-event-id="${event.id}">削除</button>
+            </div>
+        `;
+        eventListViewEl.appendChild(item);
+    });
+}
+
+function initializeAdminView() {
+    currentAdminCalendarDate = new Date();
+    generateCalendar({
+        date: currentAdminCalendarDate,
+        bodyId: 'admin-calendar-body',
+        yearMonthId: 'admin-calendar-year-month',
+        isAdmin: true
+    }).then(() => {
+        // カレンダー表示がデフォルトなので、リスト表示を初期化しておく
+        renderEventListView(); 
+    });
+    dailyEventsDateEl.textContent = '日付にカーソルを合わせてください';
+    dailyEventsListEl.innerHTML = '';
 }
 
 function showView(viewName) {
@@ -288,8 +313,41 @@ window.addEventListener('pywebviewready', () => {
     eventForm = document.getElementById('event-form');
     dailyEventsDateEl = document.getElementById('daily-events-date');
     dailyEventsListEl = document.getElementById('daily-events-list');
+    eventListViewEl = document.getElementById('admin-event-list-view');
     document.getElementById('event-cancel-btn').addEventListener('click', closeEventModal);
     eventForm.addEventListener('submit', handleSaveEvent);
+
+    // 表示切替ボタンのリスナー
+    document.getElementById('event-view-toggle').addEventListener('click', (e) => {
+        if(e.target.tagName !== 'BUTTON') return;
+        const view = e.target.dataset.view;
+        
+        document.querySelectorAll('#event-view-toggle .toggle-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+
+        if(view === 'calendar') {
+            document.getElementById('admin-event-manager').style.display = 'grid';
+            eventListViewEl.style.display = 'none';
+        } else {
+            document.getElementById('admin-event-manager').style.display = 'none';
+            eventListViewEl.style.display = 'block';
+            renderEventListView();
+        }
+    });
+
+    // 詳細・一覧リストの親要素にイベント委譲でリスナーを設定
+    [dailyEventsListEl, eventListViewEl].forEach(el => {
+        el.addEventListener('click', (e) => {
+            const eventId = e.target.dataset.eventId;
+            if(!eventId) return;
+
+            if(e.target.classList.contains('edit-btn')) {
+                handleEditEvent(eventId);
+            } else if(e.target.classList.contains('delete-btn')) {
+                handleDeleteEvent(eventId);
+            }
+        });
+    });
 
     // 終日チェックボックスのロジック
     document.getElementById('event-allday').addEventListener('change', (e) => {

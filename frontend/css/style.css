@@ -130,17 +130,6 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 #btn-goto-admin { width: 100%; padding: 15px; background-color: #28a745; }
 #btn-goto-admin:hover { background-color: #218838; }
 
-/* --- 管理者画面のレイアウト --- */
-.admin-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
-.statistics-controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
-.summary-box { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; line-height: 1.6; }
-.chart-container { position: relative; height: 350px; }
-#employee-table { width: 100%; border-collapse: collapse; }
-#employee-table th, #employee-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-#employee-table th { background-color: #f2f2f2; }
-#btn-back-to-main { background-color: #6c757d; }
-#btn-back-to-main:hover { background-color: #5a6268; }
-
 
 /* ▼▼▼ カレンダー用のスタイルを追加 ▼▼▼ */
 #calendar-container {
@@ -222,12 +211,7 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     background-color: transparent;
     cursor: default;
 }
-/* ▲▲▲ スタイルを追加 ▲▲▲ 
-
-#calendar-table td .event-placeholder {
-    margin-top: 5px;
-    font-size: 0.8em;
-}
+/* ▲▲▲ スタイルを追加 ▲▲▲ */
 
 /* ▼▼▼ モーダルとイベント用のスタイルを追加 ▼▼▼ */
 #event-modal-overlay {
@@ -350,4 +334,74 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 #daily-events-list .no-events {
     color: #888;
 }
-/* ▲▲▲ スタイルを追加 ▲▲▲
+/* ▲▲▲ スタイルを追加 ▲▲▲*/
+
+/* ▼▼▼ イベント管理の改善用スタイルを追加 ▼▼▼ */
+#event-view-toggle {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+.toggle-btn {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    margin-right: 5px;
+}
+.toggle-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+#admin-event-list-view {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.list-event-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.list-event-item:hover {
+    background-color: #f8f9fa;
+}
+
+.event-actions {
+    display: flex;
+    gap: 10px;
+}
+.edit-btn, .delete-btn {
+    font-size: 0.8em;
+    padding: 4px 8px;
+}
+.edit-btn { background-color: #28a745; }
+.edit-btn:hover { background-color: #218838; }
+.delete-btn { background-color: #dc3545; }
+.delete-btn:hover { background-color: #c82333; }
+/* ▲▲▲ スタイルを追加 ▲▲▲ */
+
+/* daily-event-itemにもactionsを追加 */
+.daily-event-item {
+    position: relative;
+    padding-right: 80px; /* actionsボタン用のスペース */
+}
+.daily-event-item .actions {
+    position: absolute;
+    right: 0;
+    top: 5px;
+}
+
+/* --- 管理者画面のレイアウト --- */
+.admin-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+.statistics-controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+.summary-box { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; line-height: 1.6; }
+.chart-container { position: relative; height: 350px; }
+#employee-table { width: 100%; border-collapse: collapse; }
+#employee-table th, #employee-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+#employee-table th { background-color: #f2f2f2; }
+#btn-back-to-main { background-color: #6c757d; }
+#btn-back-to-main:hover { background-color: #5a6268; }

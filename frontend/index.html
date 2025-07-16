@@ -85,7 +85,11 @@
             
             <div class="panel">
                 <h2>イベント管理</h2>
-                <div id="admin-event-manager" class="two-column-layout">
+                <div id="event-view-toggle">
+                    <button class="toggle-btn active" data-view="calendar">カレンダー表示</button>
+                    <button class="toggle-btn" data-view="list">一覧表示</button>
+                </div>
+                <div id="admin-event-manager">
 
                     <div id="admin-calendar-wrapper">
                         <div class="calendar-header">
@@ -107,6 +111,8 @@
                             </div>
                     </div>
 
+                <div id="admin-event-list-view" style="display: none;">
+                    </div>
                 </div>
             </div>
             <div class="panel">
@@ -181,6 +187,7 @@
         <div id="event-modal-content">
             <h2 id="event-modal-title">イベントを追加</h2>
             <form id="event-form">
+                <input type="hidden" id="event-id">
                 <div class="form-group">
                     <label for="event-title">タイトル</label>
                     <input type="text" id="event-title" required>
