@@ -103,21 +103,87 @@ function initializeLoginView() {
 // --- 管理者画面関連 ---
 function initializeAdminView() {
     currentAdminCalendarDate = new Date();
-    refreshAdminCalendarAndList(currentAdminCalendarDate);
+    generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
     if (dailyEventsDateEl) dailyEventsDateEl.textContent = '日付にカーソルを合わせてください';
     if (dailyEventsListEl) dailyEventsListEl.innerHTML = '';
 }
 
-function refreshAdminCalendarAndList(date) {
+/**
+ * カレンダーを指定された年月で生成・描画する (統合・修正版)
+ */
+function generateCalendar(options) {
+    const { date, bodyId, yearMonthId, isAdmin } = options;
     const year = date.getFullYear();
-    const month = date.getMonth() + 1;
+    const month = date.getMonth();
 
-    return window.pywebview.api.get_events_for_month(year, month).then(result => {
-        adminMonthlyEvents = result.success ? result.events : [];
-        drawCalendarGrid({ date: date, events: adminMonthlyEvents, bodyId: 'admin-calendar-body', isAdmin: true });
-        renderEventListView();
+    // 年月表示を更新
+    document.getElementById(yearMonthId).textContent = `${year}年 ${month + 1}月`;
+    
+    const calendarBody = document.getElementById(bodyId);
+    calendarBody.innerHTML = '<tr><td colspan="7">読み込み中...</td></tr>'; // 読み込み中表示
+
+    // APIから最新のイベントデータを取得
+    return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
+        const events = result.success ? result.events : [];
+        
+        // 管理者画面の場合、グローバル変数のキャッシュを更新
+        if (isAdmin) {
+            adminMonthlyEvents = events;
+        }
+        
+        // 以下、カレンダーのマス目を生成して描画するロジック
+        calendarBody.innerHTML = ''; // 描画前にクリア
+        
+        const firstDay = new Date(year, month, 1);
+        let tempDate = new Date(firstDay);
+        tempDate.setDate(tempDate.getDate() - firstDay.getDay());
+
+        for (let week = 0; week < 6; week++) {
+            let weekRow = document.createElement('tr');
+            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                let dayCell = document.createElement('td');
+                const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = tempDate.getDate();
+                dayCell.appendChild(dateSpan);
+
+                if (tempDate.getMonth() === month) {
+                    dayCell.dataset.date = dateString;
+                    if (dayOfWeek === 0) dayCell.classList.add('sunday');
+                    if (dayOfWeek === 6) dayCell.classList.add('saturday');
+                    if (tempDate.toDateString() === new Date().toDateString()) {
+                        dateSpan.classList.add('today');
+                    }
+                    
+                    const dayEvents = events.filter(e => {
+                        const eventStart = new Date(e.start_datetime.split(' ')[0]);
+                        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
+                        return tempDate >= eventStart && tempDate <= eventEnd;
+                    });
+
+                    if(dayEvents.length > 0) {
+                        const eventPlaceholder = document.createElement('div');
+                        dayEvents.slice(0, 2).forEach(event => {
+                             const eventDiv = document.createElement('div');
+                             eventDiv.className = 'calendar-event';
+                             eventDiv.textContent = event.title;
+                             eventPlaceholder.appendChild(eventDiv);
+                        });
+                        dayCell.appendChild(eventPlaceholder);
+                    }
+                } else {
+                    dayCell.classList.add('other-month');
+                }
+                weekRow.appendChild(dayCell);
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+            calendarBody.appendChild(weekRow);
+        }
     });
 }
+
+
 
 function displayDailyEvents(dateString) {
     const date = new Date(dateString + 'T00:00:00');
@@ -243,7 +309,9 @@ function handleSaveEvent(e) {
     apiCall.then(result => {
         if (result.success) {
             closeEventModal();
-            refreshAdminCalendarAndList(currentAdminCalendarDate);
+            // 修正箇所: 新しいgenerateCalendarを呼び、完了後にリスト表示も更新
+            generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true})
+                .then(() => renderEventListView());
         } else {
             alert('エラー: ' + result.message);
         }
@@ -258,10 +326,12 @@ function handleEditEvent(eventId) {
 }
 
 function handleDeleteEvent(eventId) {
-    if (confirm('このイベントを本当に削除しますか？')) {
+    if(confirm('このイベントを本当に削除しますか？')) {
         window.pywebview.api.delete_event(eventId).then(result => {
-            if (result.success) {
-                refreshAdminCalendarAndList(currentAdminCalendarDate);
+            if(result.success) {
+                // 修正箇所: 新しいgenerateCalendarを呼び、完了後にリスト表示も更新
+                generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true})
+                    .then(() => renderEventListView());
             } else {
                 alert('削除に失敗しました: ' + result.message);
             }
@@ -271,77 +341,79 @@ function handleDeleteEvent(eventId) {
 
 
 // --- カレンダー描画関数 ---
-function drawCalendarGrid(options) {
-    const { date, events, bodyId, isAdmin } = options;
-    const year = date.getFullYear();
-    const month = date.getMonth();
 
-    const calendarBody = document.getElementById(bodyId);
-    calendarBody.innerHTML = '';
-
-    const firstDay = new Date(year, month, 1);
-    let tempDate = new Date(firstDay);
-    tempDate.setDate(tempDate.getDate() - firstDay.getDay());
-
-    for (let week = 0; week < 6; week++) {
-        let weekRow = document.createElement('tr');
-        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
-            let dayCell = document.createElement('td');
-            const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
-
-            const dateSpan = document.createElement('span');
-            dateSpan.textContent = tempDate.getDate();
-            dayCell.appendChild(dateSpan);
-
-            if (tempDate.getMonth() === month) {
-                dayCell.dataset.date = dateString;
-                if (dayOfWeek === 0) dayCell.classList.add('sunday');
-                if (dayOfWeek === 6) dayCell.classList.add('saturday');
-                if (tempDate.toDateString() === new Date().toDateString()) {
-                    dateSpan.classList.add('today');
-                }
-
-                const dayEvents = events.filter(e => {
-                    const eventStart = new Date(e.start_datetime.split(' ')[0]);
-                    const eventEnd = new Date(e.end_datetime.split(' ')[0]);
-                    return tempDate >= eventStart && tempDate <= eventEnd;
-                });
-
-                if (dayEvents.length > 0) {
-                    const eventPlaceholder = document.createElement('div');
-                    dayEvents.slice(0, 2).forEach(event => {
-                        const eventDiv = document.createElement('div');
-                        eventDiv.className = 'calendar-event';
-                        eventDiv.textContent = event.title;
-                        eventPlaceholder.appendChild(eventDiv);
-                    });
-                    dayCell.appendChild(eventPlaceholder);
-                }
-            } else {
-                dayCell.classList.add('other-month');
-            }
-            weekRow.appendChild(dayCell);
-            tempDate.setDate(tempDate.getDate() + 1);
-        }
-        calendarBody.appendChild(weekRow);
-    }
-}
-
+/**
+ * カレンダーを指定された年月で生成・描画する (統合・修正版)
+ */
 function generateCalendar(options) {
     const { date, bodyId, yearMonthId, isAdmin } = options;
     const year = date.getFullYear();
     const month = date.getMonth();
 
+    // 年月表示を更新
     document.getElementById(yearMonthId).textContent = `${year}年 ${month + 1}月`;
+    
     const calendarBody = document.getElementById(bodyId);
-    calendarBody.innerHTML = '<tr><td colspan="7">読み込み中...</td></tr>';
+    calendarBody.innerHTML = '<tr><td colspan="7">読み込み中...</td></tr>'; // 読み込み中表示
 
+    // APIから最新のイベントデータを取得
     return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
         const events = result.success ? result.events : [];
+        
+        // 管理者画面の場合、グローバル変数のキャッシュを更新
         if (isAdmin) {
             adminMonthlyEvents = events;
         }
-        drawCalendarGrid({ date, events, bodyId, isAdmin });
+        
+        // 以下、カレンダーのマス目を生成して描画するロジック
+        calendarBody.innerHTML = ''; // 描画前にクリア
+        
+        const firstDay = new Date(year, month, 1);
+        let tempDate = new Date(firstDay);
+        tempDate.setDate(tempDate.getDate() - firstDay.getDay());
+
+        for (let week = 0; week < 6; week++) {
+            let weekRow = document.createElement('tr');
+            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                let dayCell = document.createElement('td');
+                const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = tempDate.getDate();
+                dayCell.appendChild(dateSpan);
+
+                if (tempDate.getMonth() === month) {
+                    dayCell.dataset.date = dateString;
+                    if (dayOfWeek === 0) dayCell.classList.add('sunday');
+                    if (dayOfWeek === 6) dayCell.classList.add('saturday');
+                    if (tempDate.toDateString() === new Date().toDateString()) {
+                        dateSpan.classList.add('today');
+                    }
+                    
+                    const dayEvents = events.filter(e => {
+                        const eventStart = new Date(e.start_datetime.split(' ')[0]);
+                        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
+                        return tempDate >= eventStart && tempDate <= eventEnd;
+                    });
+
+                    if(dayEvents.length > 0) {
+                        const eventPlaceholder = document.createElement('div');
+                        dayEvents.slice(0, 2).forEach(event => {
+                             const eventDiv = document.createElement('div');
+                             eventDiv.className = 'calendar-event';
+                             eventDiv.textContent = event.title;
+                             eventPlaceholder.appendChild(eventDiv);
+                        });
+                        dayCell.appendChild(eventPlaceholder);
+                    }
+                } else {
+                    dayCell.classList.add('other-month');
+                }
+                weekRow.appendChild(dayCell);
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+            calendarBody.appendChild(weekRow);
+        }
     });
 }
 
@@ -605,11 +677,13 @@ window.addEventListener('pywebviewready', () => {
     });
     document.getElementById('admin-prev-month-btn').addEventListener('click', () => {
         currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() - 1);
-        refreshAdminCalendarAndList(currentAdminCalendarDate);
+        // 修正箇所: 新しいgenerateCalendarを呼ぶ
+        generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
     });
     document.getElementById('admin-next-month-btn').addEventListener('click', () => {
         currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() + 1);
-        refreshAdminCalendarAndList(currentAdminCalendarDate);
+        // 修正箇所: 新しいgenerateCalendarを呼ぶ
+        generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
     });
 
     // イベントモーダル
