@@ -7,69 +7,146 @@ let isAdminViewInitialized = false;
 
 let views = {};
 
-// ▼▼▼ 追加 ▼▼▼
-let inactivityTimer = null; // 無操作タイマーのIDを保持
+// ▼▼▼ ログイン画面用クロック＆カレンダーの変数を追加 ▼▼▼
+let loginClockInterval = null;
+let currentCalendarDate = new Date();
+// ▲▲▲ 変数を追加 ▲▲▲
 
-/**
- * 30秒間操作がなかった場合にログアウトを実行する
- */
+let inactivityTimer = null;
+
 function performAutoLogout() {
     console.log("30秒間操作がなかったため、自動ログアウトします。");
-    clearTimeout(inactivityTimer); // タイマーをクリア
+    clearTimeout(inactivityTimer);
     window.pywebview.api.logout().then(() => {
         showView('login');
         alert('30秒間操作がなかったため、自動的にログアウトしました。');
     });
 }
 
-/**
- * 無操作タイマーをリセットし、再度30秒のカウントダウンを開始する
- */
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(performAutoLogout, 30 * 1000); // 30秒
+    inactivityTimer = setTimeout(performAutoLogout, 30 * 1000);
 }
 
-/**
- * 無操作タイマーの監視を開始する
- */
 function startInactivityObserver() {
-    // イベントリスナーを一度だけ設定
     ['mousemove', 'mousedown', 'keypress', 'scroll'].forEach(event => {
         window.addEventListener(event, resetInactivityTimer);
     });
-    // 最初のタイマーを開始
     resetInactivityTimer();
 }
 
-/**
- * 無操作タイマーの監視を停止する
- */
 function stopInactivityObserver() {
     clearTimeout(inactivityTimer);
     ['mousemove', 'mousedown', 'keypress', 'scroll'].forEach(event => {
         window.removeEventListener(event, resetInactivityTimer);
     });
 }
-// ▲▲▲ 追加 ▲▲▲
+
+// ▼▼▼ ログイン画面用の時計・カレンダー関数を追加 ▼▼▼
+/**
+ * ログイン画面の時計と日付を更新する
+ */
+function updateLoginClock() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('ja-JP');
+    const dateString = now.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+    });
+    document.getElementById('login-time').textContent = timeString;
+    document.getElementById('login-date').textContent = dateString;
+}
+
+/**
+ * カレンダーを指定された年月で生成・描画する
+ * @param {Date} date - 表示したい年月を含むDateオブジェクト
+ */
+function generateCalendar(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-11
+
+    document.getElementById('calendar-year-month').textContent = `${year}年 ${month + 1}月`;
+
+    const calendarBody = document.getElementById('calendar-body');
+    calendarBody.innerHTML = ''; // 中身をクリア
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const today = new Date();
+
+    let currentDate = new Date(firstDay);
+    currentDate.setDate(currentDate.getDate() - firstDay.getDay()); // 週の最初の日曜日に設定
+
+    while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+        let weekRow = document.createElement('tr');
+
+        for (let i = 0; i < 7; i++) {
+            let dayCell = document.createElement('td');
+            if (currentDate.getMonth() === month) {
+                dayCell.textContent = currentDate.getDate();
+
+                if (currentDate.getFullYear() === today.getFullYear() &&
+                    currentDate.getMonth() === today.getMonth() &&
+                    currentDate.getDate() === today.getDate()) {
+                    dayCell.classList.add('today');
+                }
+                
+                // 将来の予定表示用のプレースホルダー
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event-placeholder';
+                dayCell.appendChild(eventDiv);
+            }
+            weekRow.appendChild(dayCell);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        calendarBody.appendChild(weekRow);
+
+        if (currentDate.getMonth() > month && currentDate.getFullYear() >= year) break;
+    }
+}
+
+/**
+ * ログイン画面が表示されたときに実行する初期化処理
+ */
+function initializeLoginView() {
+    // 時計を開始
+    if (loginClockInterval) clearInterval(loginClockInterval);
+    loginClockInterval = setInterval(updateLoginClock, 1000);
+    updateLoginClock();
+
+    // カレンダーを生成
+    currentCalendarDate = new Date();
+    generateCalendar(currentCalendarDate);
+}
+// ▲▲▲ ログイン画面用の関数を追加 ▲▲▲
 
 
 function showView(viewName) {
     for (const key in views) {
         if (views[key]) {
+            // ▼▼▼ 表示切り替えロジックを修正 ▼▼▼
             views[key].style.display = 'none';
         }
     }
     if (views[viewName]) {
-        views[viewName].style.display = (viewName === 'admin') ? 'flex' : 'block';
+        const displayStyle = {
+            'login': 'grid',
+            'admin': 'flex'
+        };
+        views[viewName].style.display = displayStyle[viewName] || 'block';
     }
 
-    // ▼▼▼ 追加 ▼▼▼
-    // ログイン画面が表示されたらタイマーを停止
+    // ▼▼▼ 表示ビューに応じた処理を追加 ▼▼▼
     if (viewName === 'login') {
         stopInactivityObserver();
+        initializeLoginView(); // ログイン画面の時計とカレンダーを初期化
+        if (timeInterval) clearInterval(timeInterval); // メイン画面の時計を停止
+    } else {
+        if (loginClockInterval) clearInterval(loginClockInterval); // ログイン画面の時計を停止
     }
-    // ▲▲▲ 追加 ▲▲▲
+    // ▲▲▲ 表示ビューに応じた処理を追加 ▲▲▲
 }
 
 // ===== アプリケーションの初期化 =====
@@ -81,7 +158,19 @@ window.addEventListener('pywebviewready', () => {
     };
     
     document.getElementById('login-form').addEventListener('submit', handleLogin);
-    showView('login');
+    
+    // ▼▼▼ カレンダーのナビゲーションボタンにイベントリスナーを設定 ▼▼▼
+    document.getElementById('prev-month-btn').addEventListener('click', () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        generateCalendar(currentCalendarDate);
+    });
+    document.getElementById('next-month-btn').addEventListener('click', () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        generateCalendar(currentCalendarDate);
+    });
+    // ▲▲▲ イベントリスナーを設定 ▲▲▲
+    
+    showView('login'); // 最初にログイン画面を表示
 });
 
 // ===== 各ビューのイベントリスナーを、そのビューが初めて表示されるときに一度だけ設定する =====
@@ -130,10 +219,7 @@ function handleLogin(e) {
             initializeMainView();
             showView('main');
             setupMainViewListeners();
-
-            // ▼▼▼ 追加 ▼▼▼
-            startInactivityObserver(); // ログイン成功時に監視を開始
-            // ▲▲▲ 追加 ▲▲▲
+            startInactivityObserver();
         } else {
             loginError.textContent = result ? result.message : '不明なエラーです。';
         }
