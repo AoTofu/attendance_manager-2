@@ -34,6 +34,54 @@ class Api:
         return {'success': True, 'message': 'ログアウトしました。'}
     # ▲▲▲ 追加 ▲▲▲
 
+    # ▼▼▼ 追加 ▼▼▼
+    def get_events_for_month(self, year, month):
+        """指定された年月のイベントを取得する"""
+        try:
+            # 月の最初の日と最後の日を計算
+            start_of_month = datetime.datetime(year, month, 1)
+            # 月末日を計算
+            if month == 12:
+                end_of_month = datetime.datetime(year + 1, 1, 1) - datetime.timedelta(seconds=1)
+            else:
+                end_of_month = datetime.datetime(year, month + 1, 1) - datetime.timedelta(seconds=1)
+
+            conn = get_db_connection()
+            # 期間内に少しでも重なるイベントを取得
+            records = conn.execute(
+                "SELECT * FROM events WHERE start_datetime <= ? AND end_datetime >= ? ORDER BY start_datetime",
+                (end_of_month.strftime('%Y-%m-%d %H:%M:%S'), start_of_month.strftime('%Y-%m-%d %H:%M:%S'))
+            ).fetchall()
+            conn.close()
+            
+            events = [dict(row) for row in records]
+            return {'success': True, 'events': events}
+        except Exception as e:
+            print(f"イベント取得エラー: {e}")
+            return {'success': False, 'message': 'イベントの取得に失敗しました。'}
+
+    def add_event(self, title, description, start_str, end_str, is_allday):
+        """新しいイベントを追加する (管理者のみ)"""
+        if not self.current_user or not self.current_user['is_admin']:
+            return {'success': False, 'message': '権限がありません。'}
+        
+        if not title or not start_str or not end_str:
+            return {'success': False, 'message': 'タイトルと日時は必須です。'}
+
+        try:
+            conn = get_db_connection()
+            conn.execute(
+                "INSERT INTO events (title, description, start_datetime, end_datetime, is_allday) VALUES (?, ?, ?, ?, ?)",
+                (title, description, start_str, end_str, 1 if is_allday else 0)
+            )
+            conn.commit()
+            conn.close()
+            return {'success': True}
+        except Exception as e:
+            print(f"イベント追加エラー: {e}")
+            return {'success': False, 'message': 'イベントの追加に失敗しました。'}
+    # ▲▲▲ 追加 ▲▲▲
+
     def record_attendance(self, event_type):
         if not self.current_user:
             return {'success': False, 'message': 'ログインしていません。'}
