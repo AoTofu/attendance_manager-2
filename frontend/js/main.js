@@ -7,10 +7,16 @@ let isAdminViewInitialized = false;
 
 let views = {};
 
-// ▼▼▼ ログイン画面用クロック＆カレンダーの変数を追加 ▼▼▼
+// ▼▼▼ 追加 ▼▼▼
 let loginClockInterval = null;
 let currentCalendarDate = new Date();
-// ▲▲▲ 変数を追加 ▲▲▲
+let currentAdminCalendarDate = new Date();
+
+// モーダル関連の要素
+let eventModalOverlay = null;
+let eventForm = null;
+let selectedDateCell = null;
+// ▲▲▲ 追加 ▲▲▲
 
 let inactivityTimer = null;
 
@@ -63,68 +69,91 @@ function updateLoginClock() {
  * カレンダーを指定された年月で生成・描画する
  * @param {Date} date - 表示したい年月を含むDateオブジェクト
  */
-function generateCalendar(date) {
+function generateCalendar(date, targetBodyId, isAdmin = false) {
     const year = date.getFullYear();
-    const month = date.getMonth(); // 0-11
+    const month = date.getMonth();
 
-    document.getElementById('calendar-year-month').textContent = `${year}年 ${month + 1}月`;
+    if (isAdmin) {
+        document.getElementById('admin-calendar-year-month').textContent = `${year}年 ${month + 1}月`;
+    } else {
+        document.getElementById('calendar-year-month').textContent = `${year}年 ${month + 1}月`;
+    }
 
-    const calendarBody = document.getElementById('calendar-body');
-    calendarBody.innerHTML = ''; // 中身をクリア
+    const calendarBody = document.getElementById(targetBodyId);
+    calendarBody.innerHTML = '';
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const today = new Date();
 
     let currentDate = new Date(firstDay);
-    currentDate.setDate(currentDate.getDate() - firstDay.getDay()); // 週の最初の日曜日に設定
+    currentDate.setDate(currentDate.getDate() - firstDay.getDay());
 
-    while (currentDate <= lastDay || currentDate.getDay() !== 0) {
-        let weekRow = document.createElement('tr');
+    const renderCalendar = (events) => {
+        calendarBody.innerHTML = ''; // 再描画のためにクリア
+        let tempDate = new Date(firstDay);
+        tempDate.setDate(tempDate.getDate() - firstDay.getDay());
 
-        for (let i = 0; i < 7; i++) {
-            let dayCell = document.createElement('td');
-            if (currentDate.getMonth() === month) {
-                
-                // ▼▼▼ ここから修正 ▼▼▼
-                const dateSpan = document.createElement('span');
-                dateSpan.textContent = currentDate.getDate();
+        while (tempDate <= lastDay || tempDate.getDay() !== 0) {
+            let weekRow = document.createElement('tr');
+            for (let i = 0; i < 7; i++) {
+                let dayCell = document.createElement('td');
+                if (tempDate.getMonth() === month) {
+                    const dateSpan = document.createElement('span');
+                    dateSpan.textContent = tempDate.getDate();
+                    if (tempDate.toDateString() === today.toDateString()) {
+                        dateSpan.classList.add('today');
+                    }
+                    dayCell.appendChild(dateSpan);
 
-                if (currentDate.getFullYear() === today.getFullYear() &&
-                    currentDate.getMonth() === today.getMonth() &&
-                    currentDate.getDate() === today.getDate()) {
-                    // classを<td>ではなく<span>に付ける
-                    dateSpan.classList.add('today'); 
+                    const eventPlaceholder = document.createElement('div');
+                    eventPlaceholder.className = 'event-placeholder';
+                    
+                    // イベントを描画
+                    events.forEach(event => {
+                        const eventStart = new Date(event.start_datetime);
+                        const eventEnd = new Date(event.end_datetime);
+                        if(tempDate >= new Date(eventStart.toDateString()) && tempDate <= new Date(eventEnd.toDateString())) {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'calendar-event';
+                            eventDiv.textContent = event.title;
+                            eventPlaceholder.appendChild(eventDiv);
+                        }
+                    });
+
+                    dayCell.appendChild(eventPlaceholder);
+
+                    if(isAdmin) {
+                        const cellDate = new Date(tempDate);
+                        dayCell.addEventListener('click', () => openEventModal(cellDate));
+                    }
                 }
-                dayCell.appendChild(dateSpan); // <td> の中に <span> を追加
-                // ▲▲▲ ここまで修正 ▲▲▲
-
-                // 将来の予定表示用のプレースホルダー
-                const eventDiv = document.createElement('div');
-                eventDiv.className = 'event-placeholder';
-                dayCell.appendChild(eventDiv);
+                weekRow.appendChild(dayCell);
+                tempDate.setDate(tempDate.getDate() + 1);
             }
-            weekRow.appendChild(dayCell);
-            currentDate.setDate(currentDate.getDate() + 1);
+            calendarBody.appendChild(weekRow);
+            if (tempDate.getMonth() > month && tempDate.getFullYear() >= year) break;
         }
-        calendarBody.appendChild(weekRow);
+    };
 
-        if (currentDate.getMonth() > month && currentDate.getFullYear() >= year) break;
-    }
+    window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
+        if (result.success) {
+            renderCalendar(result.events);
+        } else {
+            renderCalendar([]); // エラーでもカレンダーは描画
+        }
+    });
 }
 
 /**
  * ログイン画面が表示されたときに実行する初期化処理
  */
 function initializeLoginView() {
-    // 時計を開始
     if (loginClockInterval) clearInterval(loginClockInterval);
     loginClockInterval = setInterval(updateLoginClock, 1000);
     updateLoginClock();
-
-    // カレンダーを生成
     currentCalendarDate = new Date();
-    generateCalendar(currentCalendarDate);
+    generateCalendar(currentCalendarDate, 'calendar-body', false);
 }
 // ▲▲▲ ログイン画面用の関数を追加 ▲▲▲
 
@@ -132,7 +161,6 @@ function initializeLoginView() {
 function showView(viewName) {
     for (const key in views) {
         if (views[key]) {
-            // ▼▼▼ 表示切り替えロジックを修正 ▼▼▼
             views[key].style.display = 'none';
         }
     }
@@ -144,16 +172,56 @@ function showView(viewName) {
         views[viewName].style.display = displayStyle[viewName] || 'block';
     }
 
-    // ▼▼▼ 表示ビューに応じた処理を追加 ▼▼▼
     if (viewName === 'login') {
         stopInactivityObserver();
-        initializeLoginView(); // ログイン画面の時計とカレンダーを初期化
-        if (timeInterval) clearInterval(timeInterval); // メイン画面の時計を停止
+        initializeLoginView();
+        if (timeInterval) clearInterval(timeInterval);
     } else {
-        if (loginClockInterval) clearInterval(loginClockInterval); // ログイン画面の時計を停止
+        if (loginClockInterval) clearInterval(loginClockInterval);
     }
-    // ▲▲▲ 表示ビューに応じた処理を追加 ▲▲▲
+    if (viewName === 'admin') {
+        initializeAdminView();
+    }
 }
+
+// ▼▼▼ 管理者画面用カレンダーとモーダルの関数を追加 ▼▼▼
+function initializeAdminView() {
+    currentAdminCalendarDate = new Date();
+    generateCalendar(currentAdminCalendarDate, 'admin-calendar-body', true);
+}
+
+function openEventModal(date) {
+    eventForm.reset();
+    const formattedDate = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
+    document.getElementById('event-start').value = formattedDate + 'T09:00';
+    document.getElementById('event-end').value = formattedDate + 'T10:00';
+    eventModalOverlay.style.display = 'flex';
+}
+
+function closeEventModal() {
+    eventModalOverlay.style.display = 'none';
+}
+
+function handleSaveEvent(e) {
+    e.preventDefault();
+    const title = document.getElementById('event-title').value;
+    const description = document.getElementById('event-description').value;
+    const startStr = document.getElementById('event-start').value.replace('T', ' ') + ':00';
+    const endStr = document.getElementById('event-end').value.replace('T', ' ') + ':00';
+    const isAllday = document.getElementById('event-allday').checked;
+
+    window.pywebview.api.add_event(title, description, startStr, endStr, isAllday).then(result => {
+        if (result.success) {
+            closeEventModal();
+            // 両方のカレンダーを再描画
+            generateCalendar(currentCalendarDate, 'calendar-body', false);
+            generateCalendar(currentAdminCalendarDate, 'admin-calendar-body', true);
+        } else {
+            alert('エラー: ' + result.message);
+        }
+    });
+}
+// ▲▲▲ 関数を追加 ▲▲▲
 
 // ===== アプリケーションの初期化 =====
 window.addEventListener('pywebviewready', () => {
@@ -168,13 +236,37 @@ window.addEventListener('pywebviewready', () => {
     // ▼▼▼ カレンダーのナビゲーションボタンにイベントリスナーを設定 ▼▼▼
     document.getElementById('prev-month-btn').addEventListener('click', () => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        generateCalendar(currentCalendarDate);
+        generateCalendar(currentCalendarDate, 'calendar-body', false);
     });
     document.getElementById('next-month-btn').addEventListener('click', () => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        generateCalendar(currentCalendarDate);
+        generateCalendar(currentCalendarDate, 'calendar-body', false);
     });
     // ▲▲▲ イベントリスナーを設定 ▲▲▲
+
+    // ▼▼▼ モーダルと管理者カレンダーの初期化を追加 ▼▼▼
+    eventModalOverlay = document.getElementById('event-modal-overlay');
+    eventForm = document.getElementById('event-form');
+    document.getElementById('event-cancel-btn').addEventListener('click', closeEventModal);
+    eventForm.addEventListener('submit', handleSaveEvent);
+
+    // 終日チェックボックスのロジック
+    document.getElementById('event-allday').addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        document.getElementById('event-start').type = isChecked ? 'date' : 'datetime-local';
+        document.getElementById('event-end').type = isChecked ? 'date' : 'datetime-local';
+    });
+
+    // 管理者カレンダーのナビゲーション
+    document.getElementById('admin-prev-month-btn').addEventListener('click', () => {
+        currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() - 1);
+        generateCalendar(currentAdminCalendarDate, 'admin-calendar-body', true);
+    });
+    document.getElementById('admin-next-month-btn').addEventListener('click', () => {
+        currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() + 1);
+        generateCalendar(currentAdminCalendarDate, 'admin-calendar-body', true);
+    });
+    // ▲▲▲ 初期化を追加 ▲▲▲
     
     showView('login'); // 最初にログイン画面を表示
 });
@@ -194,9 +286,7 @@ function setupMainViewListeners() {
         loadEmployees();
     });
 
-    // ▼▼▼ 追加 ▼▼▼
     document.getElementById('btn-logout').addEventListener('click', handleManualLogout);
-    // ▲▲▲ 追加 ▲▲▲
 
     isMainViewInitialized = true;
 }
@@ -214,7 +304,6 @@ function setupAdminViewListeners() {
 
 // ===== 機能別関数 =====
 
-// ▼▼▼ 追加 ▼▼▼
 /**
  * 手動ログアウト処理
  */
@@ -225,7 +314,6 @@ function handleManualLogout() {
         showView('login'); // ログイン画面に遷移
     });
 }
-// ▲▲▲ 追加 ▲▲▲
 
 
 function handleLogin(e) {
