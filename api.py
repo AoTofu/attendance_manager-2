@@ -26,6 +26,14 @@ class Api:
             print("ログイン失敗: ユーザー名またはパスワードが違います。")
             return { 'success': False, 'message': 'ユーザー名またはパスワードが正しくありません。' }
 
+    # ▼▼▼ 追加 ▼▼▼
+    def logout(self):
+        """ユーザーをログアウトさせ、セッション情報をクリアする"""
+        print(f"ログアウト実行: user={self.current_user}")
+        self.current_user = None
+        return {'success': True, 'message': 'ログアウトしました。'}
+    # ▲▲▲ 追加 ▲▲▲
+
     def record_attendance(self, event_type):
         if not self.current_user:
             return {'success': False, 'message': 'ログインしていません。'}
@@ -106,7 +114,6 @@ class Api:
                 day_str = date_obj.strftime('%Y-%m-%d')
                 total_work_seconds = 0
                 
-                # 'clock_in'で始まるセッションと'end_break'で始まるセッションを計算
                 last_start_time = None
                 for record in group:
                     event_type = record['event_type']
@@ -121,7 +128,6 @@ class Api:
                 
                 daily_work_hours[day_str] = total_work_seconds / 3600
 
-            # グラフ表示期間中のすべての日付を生成
             labels = []
             current_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
             end_date_only = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
@@ -129,7 +135,7 @@ class Api:
                 labels.append(current_date.strftime('%Y-%m-%d'))
                 current_date += datetime.timedelta(days=1)
 
-            data = [daily_work_hours.get(label, 0) for label in labels] # 労働がない日は0にする
+            data = [daily_work_hours.get(label, 0) for label in labels]
             
             total_hours = sum(data)
             total_wage = total_hours * hourly_wage

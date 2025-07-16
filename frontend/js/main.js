@@ -7,6 +7,53 @@ let isAdminViewInitialized = false;
 
 let views = {};
 
+// ▼▼▼ 追加 ▼▼▼
+let inactivityTimer = null; // 無操作タイマーのIDを保持
+
+/**
+ * 30秒間操作がなかった場合にログアウトを実行する
+ */
+function performAutoLogout() {
+    console.log("30秒間操作がなかったため、自動ログアウトします。");
+    clearTimeout(inactivityTimer); // タイマーをクリア
+    window.pywebview.api.logout().then(() => {
+        showView('login');
+        alert('30秒間操作がなかったため、自動的にログアウトしました。');
+    });
+}
+
+/**
+ * 無操作タイマーをリセットし、再度30秒のカウントダウンを開始する
+ */
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(performAutoLogout, 30 * 1000); // 30秒
+}
+
+/**
+ * 無操作タイマーの監視を開始する
+ */
+function startInactivityObserver() {
+    // イベントリスナーを一度だけ設定
+    ['mousemove', 'mousedown', 'keypress', 'scroll'].forEach(event => {
+        window.addEventListener(event, resetInactivityTimer);
+    });
+    // 最初のタイマーを開始
+    resetInactivityTimer();
+}
+
+/**
+ * 無操作タイマーの監視を停止する
+ */
+function stopInactivityObserver() {
+    clearTimeout(inactivityTimer);
+    ['mousemove', 'mousedown', 'keypress', 'scroll'].forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer);
+    });
+}
+// ▲▲▲ 追加 ▲▲▲
+
+
 function showView(viewName) {
     for (const key in views) {
         if (views[key]) {
@@ -14,9 +61,15 @@ function showView(viewName) {
         }
     }
     if (views[viewName]) {
-        // admin-viewのみflex、他はblock(またはgridなど)で表示
         views[viewName].style.display = (viewName === 'admin') ? 'flex' : 'block';
     }
+
+    // ▼▼▼ 追加 ▼▼▼
+    // ログイン画面が表示されたらタイマーを停止
+    if (viewName === 'login') {
+        stopInactivityObserver();
+    }
+    // ▲▲▲ 追加 ▲▲▲
 }
 
 // ===== アプリケーションの初期化 =====
@@ -41,7 +94,7 @@ function setupMainViewListeners() {
     document.getElementById('btn-end-break').addEventListener('click', () => handleAttendance('end_break'));
 
     document.getElementById('btn-goto-admin').addEventListener('click', () => {
-        setupAdminViewListeners(); // 管理者ビューのリスナーを準備
+        setupAdminViewListeners();
         showView('admin');
         loadEmployees();
     });
@@ -76,7 +129,11 @@ function handleLogin(e) {
             
             initializeMainView();
             showView('main');
-            setupMainViewListeners(); // ★メインビューが表示された直後にリスナーを設定
+            setupMainViewListeners();
+
+            // ▼▼▼ 追加 ▼▼▼
+            startInactivityObserver(); // ログイン成功時に監視を開始
+            // ▲▲▲ 追加 ▲▲▲
         } else {
             loginError.textContent = result ? result.message : '不明なエラーです。';
         }
