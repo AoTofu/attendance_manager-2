@@ -7,27 +7,48 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- 全てのビューを内包するコンテナ -->
     <div id="app-container">
 
-        <!-- ===== ビュー1: ログイン画面 ===== -->
         <div id="login-view" class="view">
-            <h1>ログイン</h1>
-            <div id="login-error" class="error-message"></div>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="name">従業員名</label>
-                    <input type="text" id="name" required>
+            <div id="login-info-panel">
+                <div id="login-clock-date">
+                    <h2 id="login-time">00:00:00</h2>
+                    <p id="login-date">2025年7月17日 (木)</p>
                 </div>
-                <div class="form-group">
-                    <label for="password">パスワード</label>
-                    <input type="password" id="password" required>
+                <div id="calendar-container">
+                    <div id="calendar-header">
+                        <button id="prev-month-btn">&lt;</button>
+                        <h3 id="calendar-year-month">2025年 7月</h3>
+                        <button id="next-month-btn">&gt;</button>
+                    </div>
+                    <table id="calendar-table">
+                        <thead>
+                            <tr>
+                                <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calendar-body">
+                            </tbody>
+                    </table>
                 </div>
-                <button type="submit">ログイン</button>
-            </form>
-        </div>
+            </div>
+            <div id="login-form-panel">
+                <h1>ログイン</h1>
+                <div id="login-error" class="error-message"></div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="name">従業員名</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">パスワード</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit">ログイン</button>
+                </form>
+            </div>
+            </div>
 
-        <!-- ===== ビュー2: メイン画面（ダッシュボード）===== -->
         <div id="main-view" class="view">
             <header class="main-header">
                 <div class="user-info">
@@ -53,7 +74,6 @@
             </div>
         </div>
 
-        <!-- ===== ビュー3: 管理者画面 ===== -->
         <div id="admin-view" class="view">
             <header class="main-header">
                 <h1>管理者モード</h1>
