@@ -1,23 +1,59 @@
+// ===================================================
+//  グローバル変数定義
+// ===================================================
 let currentUser = null;
 let timeInterval = null;
-let eventListViewEl = null;
 let attendanceChart = null;
+let inactivityTimer = null;
 
 let isMainViewInitialized = false;
 let isAdminViewInitialized = false;
 
 let views = {};
-
 let loginClockInterval = null;
 let currentCalendarDate = new Date();
 let currentAdminCalendarDate = new Date();
 let adminMonthlyEvents = []; // 管理者カレンダーの月間イベントをキャッシュ
 
 // DOM要素
-let eventModalOverlay, eventForm, dailyEventsDateEl, dailyEventsListEl;
+let eventModalOverlay, eventForm, dailyEventsDateEl, dailyEventsListEl, eventListViewEl;
 
-let inactivityTimer = null;
 
+// ===================================================
+//  機能別関数 (定義セクション)
+// ===================================================
+
+/**
+ * 指定したビューを表示する
+ */
+function showView(viewName) {
+    for (const key in views) {
+        if (views[key]) {
+            views[key].style.display = 'none';
+        }
+    }
+    if (views[viewName]) {
+        const displayStyle = {
+            'login': 'grid',
+            'admin': 'flex'
+        };
+        views[viewName].style.display = displayStyle[viewName] || 'block';
+    }
+
+    if (viewName === 'login') {
+        stopInactivityObserver();
+        initializeLoginView();
+        if (timeInterval) clearInterval(timeInterval);
+    } else {
+        if (loginClockInterval) clearInterval(loginClockInterval);
+    }
+
+    if (viewName === 'admin') {
+        initializeAdminView();
+    }
+}
+
+// --- 自動ログアウト関連 ---
 function performAutoLogout() {
     console.log("30秒間操作がなかったため、自動ログアウトします。");
     clearTimeout(inactivityTimer);
@@ -46,103 +82,14 @@ function stopInactivityObserver() {
     });
 }
 
-/**
- * ログイン画面の時計と日付を更新する
- */
+
+// --- ログイン画面関連 ---
 function updateLoginClock() {
     const now = new Date();
     const timeString = now.toLocaleTimeString('ja-JP');
-    const dateString = now.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long'
-    });
+    const dateString = now.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
     document.getElementById('login-time').textContent = timeString;
     document.getElementById('login-date').textContent = dateString;
-}
-
-/**
- * カレンダーを指定された年月で生成・描画する (共通関数)
- * @param {object} options - 設定オブジェクト { date, bodyId, isAdmin, yearMonthId }
- */
-function generateCalendar(options) {
-    const { date, bodyId, isAdmin, yearMonthId } = options;
-    const year = date.getFullYear();
-    const month = date.getMonth();
-
-    document.getElementById(yearMonthId).textContent = `${year}年 ${month + 1}月`;
-
-    const calendarBody = document.getElementById(bodyId);
-    calendarBody.innerHTML = '';
-
-    // 月のイベントを取得
-    return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
-        const events = result.success ? result.events : [];
-        if(isAdmin) {
-            adminMonthlyEvents = events;
-        }
-        
-        // カレンダーの描画
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        let tempDate = new Date(firstDay);
-        tempDate.setDate(tempDate.getDate() - firstDay.getDay());
-
-        // 6週間分 (42日) のセルを生成
-        for (let week = 0; week < 6; week++) {
-            let weekRow = document.createElement('tr');
-            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
-                let dayCell = document.createElement('td');
-                const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
-                
-                const dateSpan = document.createElement('span');
-                dateSpan.textContent = tempDate.getDate();
-                dayCell.appendChild(dateSpan);
-
-                // ▼▼▼ ここからロジックを修正・追加 ▼▼▼
-                if (tempDate.getMonth() === month) {
-                    // --- 当月の日付の処理 ---
-                    dayCell.dataset.date = dateString;
-
-                    // 土日のクラス設定
-                    if (dayOfWeek === 0) dayCell.classList.add('sunday');
-                    if (dayOfWeek === 6) dayCell.classList.add('saturday');
-
-                    // 今日のクラス設定
-                    if (tempDate.toDateString() === new Date().toDateString()) {
-                        dateSpan.classList.add('today');
-                    }
-                    
-                    // イベントの表示
-                    const dayEvents = events.filter(e => {
-                        const eventStart = new Date(e.start_datetime.split(' ')[0]);
-                        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
-                        return tempDate >= eventStart && tempDate <= eventEnd;
-                    });
-
-                    if(dayEvents.length > 0) {
-                        const eventPlaceholder = document.createElement('div');
-                        dayEvents.forEach(event => {
-                             const eventDiv = document.createElement('div');
-                             eventDiv.className = 'calendar-event';
-                             eventDiv.textContent = event.title;
-                             eventPlaceholder.appendChild(eventDiv);
-                        });
-                        dayCell.appendChild(eventPlaceholder);
-                    }
-                } else {
-                    // --- 前月・翌月の日付の処理 ---
-                    dayCell.classList.add('other-month');
-                }
-                // ▲▲▲ ロジックを修正・追加 ▲▲▲
-
-                weekRow.appendChild(dayCell);
-                tempDate.setDate(tempDate.getDate() + 1);
-            }
-            calendarBody.appendChild(weekRow);
-        }
-    });
 }
 
 function initializeLoginView() {
@@ -150,32 +97,15 @@ function initializeLoginView() {
     loginClockInterval = setInterval(updateLoginClock, 1000);
     updateLoginClock();
     currentCalendarDate = new Date();
-    generateCalendar({
-        date: currentCalendarDate,
-        bodyId: 'calendar-body',
-        yearMonthId: 'calendar-year-month',
-        isAdmin: false
-    });
+    generateCalendar({ date: currentCalendarDate, bodyId: 'calendar-body', yearMonthId: 'calendar-year-month', isAdmin: false });
 }
 
-function handleEditEvent(eventId) {
-    const event = adminMonthlyEvents.find(e => e.id == eventId);
-    if(event) {
-        openEventModal(event);
-    }
-}
-
-function handleDeleteEvent(eventId) {
-    if(confirm('このイベントを本当に削除しますか？')) {
-        window.pywebview.api.delete_event(eventId).then(result => {
-            if(result.success) {
-                generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
-                renderEventListView();
-            } else {
-                alert('削除に失敗しました: ' + result.message);
-            }
-        });
-    }
+// --- 管理者画面関連 ---
+function initializeAdminView() {
+    currentAdminCalendarDate = new Date();
+    generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true });
+    if (dailyEventsDateEl) dailyEventsDateEl.textContent = '日付にカーソルを合わせてください';
+    if (dailyEventsListEl) dailyEventsListEl.innerHTML = '';
 }
 
 function displayDailyEvents(dateString) {
@@ -184,14 +114,9 @@ function displayDailyEvents(dateString) {
     dailyEventsListEl.innerHTML = '';
 
     const dayEvents = adminMonthlyEvents.filter(e => {
-        const eventStart = new Date(e.start_datetime);
-        const eventEnd = new Date(e.end_datetime);
-        // 日付のみを比較
-        const eventStartDateOnly = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
-        const eventEndDateOnly = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
-        const currentDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-        return currentDateOnly >= eventStartDateOnly && currentDateOnly <= eventEndDateOnly;
+        const eventStart = new Date(e.start_datetime.split(' ')[0]);
+        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
+        return date >= eventStart && date <= eventEnd;
     });
 
     if (dayEvents.length === 0) {
@@ -203,7 +128,7 @@ function displayDailyEvents(dateString) {
         const item = document.createElement('div');
         item.className = 'daily-event-item';
         const startTime = event.is_allday ? '終日' : new Date(event.start_datetime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        
+
         item.innerHTML = `
             <div class="actions">
                 <button class="edit-btn" data-event-id="${event.id}">編集</button>
@@ -223,8 +148,7 @@ function renderEventListView() {
         eventListViewEl.innerHTML = '<p class="no-events">この月のイベントはありません。</p>';
         return;
     }
-    
-    // 日付順にソート
+
     const sortedEvents = [...adminMonthlyEvents].sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
 
     sortedEvents.forEach(event => {
@@ -246,192 +170,165 @@ function renderEventListView() {
     });
 }
 
-function initializeAdminView() {
-    currentAdminCalendarDate = new Date();
-    generateCalendar({
-        date: currentAdminCalendarDate,
-        bodyId: 'admin-calendar-body',
-        yearMonthId: 'admin-calendar-year-month',
-        isAdmin: true
-    }).then(() => {
-        // カレンダー表示がデフォルトなので、リスト表示を初期化しておく
-        renderEventListView(); 
-    });
-    dailyEventsDateEl.textContent = '日付にカーソルを合わせてください';
-    dailyEventsListEl.innerHTML = '';
-}
 
-function showView(viewName) {
-    for (const key in views) {
-        if (views[key]) {
-            views[key].style.display = 'none';
-        }
-    }
-    if (views[viewName]) {
-        const displayStyle = {
-            'login': 'grid',
-            'admin': 'flex'
-        };
-        views[viewName].style.display = displayStyle[viewName] || 'block';
-    }
+// --- イベントモーダル関連 ---
+function openEventModal(dateOrEvent) {
+    eventForm.reset();
+    document.getElementById('event-id').value = '';
 
-    if (viewName === 'login') {
-        stopInactivityObserver();
-        initializeLoginView();
-        if (timeInterval) clearInterval(timeInterval);
+    if (dateOrEvent instanceof Date) {
+        document.getElementById('event-modal-title').textContent = 'イベントを追加';
+        const dateString = `${dateOrEvent.getFullYear()}-${('0' + (dateOrEvent.getMonth() + 1)).slice(-2)}-${('0' + dateOrEvent.getDate()).slice(-2)}`;
+        document.getElementById('event-start').type = 'datetime-local';
+        document.getElementById('event-end').type = 'datetime-local';
+        document.getElementById('event-start').value = dateString + 'T09:00';
+        document.getElementById('event-end').value = dateString + 'T10:00';
     } else {
-        if (loginClockInterval) clearInterval(loginClockInterval);
+        document.getElementById('event-modal-title').textContent = 'イベントを編集';
+        const event = dateOrEvent;
+        document.getElementById('event-id').value = event.id;
+        document.getElementById('event-title').value = event.title;
+        document.getElementById('event-allday').checked = event.is_allday;
+        document.getElementById('event-start').type = event.is_allday ? 'date' : 'datetime-local';
+        document.getElementById('event-end').type = event.is_allday ? 'date' : 'datetime-local';
+        document.getElementById('event-start').value = event.is_allday ? event.start_datetime.slice(0, 10) : event.start_datetime.slice(0, 16);
+        document.getElementById('event-end').value = event.is_allday ? event.end_datetime.slice(0, 10) : event.end_datetime.slice(0, 16);
+        document.getElementById('event-description').value = event.description;
     }
-    if (viewName === 'admin') {
-        initializeAdminView();
+    eventModalOverlay.style.display = 'flex';
+}
+
+function closeEventModal() {
+    eventModalOverlay.style.display = 'none';
+}
+
+function handleSaveEvent(e) {
+    e.preventDefault();
+    const eventId = document.getElementById('event-id').value;
+    const title = document.getElementById('event-title').value;
+    const description = document.getElementById('event-description').value;
+    const isAllday = document.getElementById('event-allday').checked;
+
+    let startStr = document.getElementById('event-start').value;
+    let endStr = document.getElementById('event-end').value;
+
+    if (isAllday) {
+        startStr += ' 00:00:00';
+        endStr += ' 23:59:59';
+    } else {
+        startStr = startStr.replace('T', ' ') + ':00';
+        endStr = endStr.replace('T', ' ') + ':00';
+    }
+
+    if (endStr < startStr) {
+        alert('終了日時は開始日時より後に設定してください。');
+        return;
+    }
+
+    const apiCall = eventId
+        ? window.pywebview.api.update_event(eventId, title, description, startStr, endStr, isAllday)
+        : window.pywebview.api.add_event(title, description, startStr, endStr, isAllday);
+
+    apiCall.then(result => {
+        if (result.success) {
+            closeEventModal();
+            generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true })
+                .then(() => renderEventListView());
+        } else {
+            alert('エラー: ' + result.message);
+        }
+    });
+}
+
+function handleEditEvent(eventId) {
+    const event = adminMonthlyEvents.find(e => e.id == eventId);
+    if (event) {
+        openEventModal(event);
     }
 }
 
-// ===== アプリケーションの初期化 =====
-window.addEventListener('pywebviewready', () => {
-    views = {
-        login: document.getElementById('login-view'),
-        main: document.getElementById('main-view'),
-        admin: document.getElementById('admin-view'),
-    };
-    
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    
-    // ▼▼▼ カレンダーのナビゲーションボタンにイベントリスナーを設定 ▼▼▼
-    document.getElementById('prev-month-btn').addEventListener('click', () => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        generateCalendar({date: currentCalendarDate, bodyId: 'calendar-body', yearMonthId: 'calendar-year-month', isAdmin: false});
-    });
-    document.getElementById('next-month-btn').addEventListener('click', () => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        generateCalendar({date: currentCalendarDate, bodyId: 'calendar-body', yearMonthId: 'calendar-year-month', isAdmin: false});
-    });
-    // ▲▲▲ イベントリスナーを設定 ▲▲▲
-
-    // ▼▼▼ モーダルと管理者カレンダーの初期化を追加 ▼▼▼
-    eventModalOverlay = document.getElementById('event-modal-overlay');
-    eventForm = document.getElementById('event-form');
-    dailyEventsDateEl = document.getElementById('daily-events-date');
-    dailyEventsListEl = document.getElementById('daily-events-list');
-    eventListViewEl = document.getElementById('admin-event-list-view');
-    document.getElementById('event-cancel-btn').addEventListener('click', closeEventModal);
-    eventForm.addEventListener('submit', handleSaveEvent);
-
-    // 表示切替ボタンのリスナー
-    document.getElementById('event-view-toggle').addEventListener('click', (e) => {
-        if(e.target.tagName !== 'BUTTON') return;
-        const view = e.target.dataset.view;
-        
-        document.querySelectorAll('#event-view-toggle .toggle-btn').forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
-
-        if(view === 'calendar') {
-            document.getElementById('admin-event-manager').style.display = 'grid';
-            eventListViewEl.style.display = 'none';
-        } else {
-            document.getElementById('admin-event-manager').style.display = 'none';
-            eventListViewEl.style.display = 'block';
-            renderEventListView();
-        }
-    });
-
-    // 詳細・一覧リストの親要素にイベント委譲でリスナーを設定
-    [dailyEventsListEl, eventListViewEl].forEach(el => {
-        el.addEventListener('click', (e) => {
-            const eventId = e.target.dataset.eventId;
-            if(!eventId) return;
-
-            if(e.target.classList.contains('edit-btn')) {
-                handleEditEvent(eventId);
-            } else if(e.target.classList.contains('delete-btn')) {
-                handleDeleteEvent(eventId);
+function handleDeleteEvent(eventId) {
+    if (confirm('このイベントを本当に削除しますか？')) {
+        window.pywebview.api.delete_event(eventId).then(result => {
+            if (result.success) {
+                generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true })
+                    .then(() => renderEventListView());
+            } else {
+                alert('削除に失敗しました: ' + result.message);
             }
         });
-    });
+    }
+}
 
-    // 終日チェックボックスのロジック
-    document.getElementById('event-allday').addEventListener('change', (e) => {
-        const isChecked = e.target.checked;
-        document.getElementById('event-start').type = isChecked ? 'date' : 'datetime-local';
-        document.getElementById('event-end').type = isChecked ? 'date' : 'datetime-local';
-    });
 
-    // ▼▼▼ 管理者カレンダーのイベント処理 (イベント委譲) ▼▼▼
-    const adminCalendarBody = document.getElementById('admin-calendar-body');
-    
-    adminCalendarBody.addEventListener('mouseover', (e) => {
-        const cell = e.target.closest('td');
-        if (cell && cell.dataset.date) {
-            displayDailyEvents(cell.dataset.date);
+// --- 共通カレンダー生成 ---
+function generateCalendar(options) {
+    const { date, bodyId, isAdmin, yearMonthId } = options;
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    document.getElementById(yearMonthId).textContent = `${year}年 ${month + 1}月`;
+    const calendarBody = document.getElementById(bodyId);
+    calendarBody.innerHTML = '<tr><td colspan="7">読み込み中...</td></tr>';
+
+    return window.pywebview.api.get_events_for_month(year, month + 1).then(result => {
+        calendarBody.innerHTML = '';
+        const events = result.success ? result.events : [];
+        if (isAdmin) {
+            adminMonthlyEvents = events;
+        }
+
+        const firstDay = new Date(year, month, 1);
+        let tempDate = new Date(firstDay);
+        tempDate.setDate(tempDate.getDate() - firstDay.getDay());
+
+        for (let week = 0; week < 6; week++) {
+            let weekRow = document.createElement('tr');
+            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                let dayCell = document.createElement('td');
+                const dateString = `${tempDate.getFullYear()}-${('0' + (tempDate.getMonth() + 1)).slice(-2)}-${('0' + tempDate.getDate()).slice(-2)}`;
+
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = tempDate.getDate();
+                dayCell.appendChild(dateSpan);
+
+                if (tempDate.getMonth() === month) {
+                    dayCell.dataset.date = dateString;
+                    if (dayOfWeek === 0) dayCell.classList.add('sunday');
+                    if (dayOfWeek === 6) dayCell.classList.add('saturday');
+                    if (tempDate.toDateString() === new Date().toDateString()) {
+                        dateSpan.classList.add('today');
+                    }
+
+                    const dayEvents = events.filter(e => {
+                        const eventStart = new Date(e.start_datetime.split(' ')[0]);
+                        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
+                        return tempDate >= eventStart && tempDate <= eventEnd;
+                    });
+
+                    if (dayEvents.length > 0) {
+                        const eventPlaceholder = document.createElement('div');
+                        dayEvents.slice(0, 2).forEach(event => {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'calendar-event';
+                            eventDiv.textContent = event.title;
+                            eventPlaceholder.appendChild(eventDiv);
+                        });
+                        dayCell.appendChild(eventPlaceholder);
+                    }
+                } else {
+                    dayCell.classList.add('other-month');
+                }
+                weekRow.appendChild(dayCell);
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+            calendarBody.appendChild(weekRow);
         }
     });
-
-    adminCalendarBody.addEventListener('click', (e) => {
-        const cell = e.target.closest('td');
-        if (cell && cell.dataset.date) {
-            openEventModal(cell.dataset.date);
-        }
-    });
-
-    // 管理者カレンダーのナビゲーション
-    document.getElementById('admin-prev-month-btn').addEventListener('click', () => {
-        currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() - 1);
-        generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
-    });
-    document.getElementById('admin-next-month-btn').addEventListener('click', () => {
-        currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() + 1);
-        generateCalendar({date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true});
-    });
-    // ▲▲▲ 初期化を追加 ▲▲▲
-    
-    showView('login'); // 最初にログイン画面を表示
-});
-
-// ===== 各ビューのイベントリスナーを、そのビューが初めて表示されるときに一度だけ設定する =====
-function setupMainViewListeners() {
-    if (isMainViewInitialized) return;
-
-    document.getElementById('btn-clock-in').addEventListener('click', () => handleAttendance('clock_in'));
-    document.getElementById('btn-clock-out').addEventListener('click', () => handleAttendance('clock_out'));
-    document.getElementById('btn-start-break').addEventListener('click', () => handleAttendance('start_break'));
-    document.getElementById('btn-end-break').addEventListener('click', () => handleAttendance('end_break'));
-
-    document.getElementById('btn-goto-admin').addEventListener('click', () => {
-        setupAdminViewListeners();
-        showView('admin');
-        loadEmployees();
-    });
-
-    document.getElementById('btn-logout').addEventListener('click', handleManualLogout);
-
-    isMainViewInitialized = true;
-}
-
-function setupAdminViewListeners() {
-    if (isAdminViewInitialized) return;
-
-    document.getElementById('btn-back-to-main').addEventListener('click', () => showView('main'));
-    document.getElementById('add-employee-form').addEventListener('submit', handleAddEmployee);
-    document.getElementById('btn-show-chart').addEventListener('click', showAttendanceChart);
-    setDefaultDates();
-
-    isAdminViewInitialized = true;
-}
-
-// ===== 機能別関数 =====
-
-/**
- * 手動ログアウト処理
- */
-function handleManualLogout() {
-    console.log("手動ログアウトを実行します。");
-    stopInactivityObserver(); // 無操作タイマーを停止
-    window.pywebview.api.logout().then(() => {
-        showView('login'); // ログイン画面に遷移
-    });
 }
 
 
+// --- メイン画面・勤怠関連 ---
 function handleLogin(e) {
     e.preventDefault();
     const name = document.getElementById('name').value;
@@ -443,7 +340,7 @@ function handleLogin(e) {
             currentUser = result.user;
             loginError.textContent = '';
             document.getElementById('login-form').reset();
-            
+
             initializeMainView();
             showView('main');
             setupMainViewListeners();
@@ -454,11 +351,28 @@ function handleLogin(e) {
     });
 }
 
+function handleManualLogout() {
+    console.log("手動ログアウトを実行します。");
+    stopInactivityObserver();
+    window.pywebview.api.logout().then(() => {
+        showView('login');
+    });
+}
+
 function initializeMainView() {
     document.getElementById('user-name').textContent = currentUser.name;
     document.getElementById('admin-menu').style.display = currentUser.is_admin ? 'block' : 'none';
     startTimeUpdater();
     updateAttendanceStatus();
+}
+
+function startTimeUpdater() {
+    const timeDisplay = document.getElementById('current-time');
+    if (timeInterval) clearInterval(timeInterval);
+    timeInterval = setInterval(() => {
+        const now = new Date();
+        timeDisplay.textContent = now.toLocaleTimeString('ja-JP');
+    }, 1000);
 }
 
 function handleAttendance(eventType) {
@@ -503,24 +417,20 @@ function updateAttendanceStatus() {
     });
 }
 
+
+// --- 従業員・勤怠集計関連 (管理者) ---
 function loadEmployees() {
     window.pywebview.api.get_all_employees().then(result => {
         if (result.success) {
             const tableBody = document.querySelector("#employee-table tbody");
             const employeeSelect = document.getElementById('employee-select');
-            
+
             tableBody.innerHTML = '';
             employeeSelect.innerHTML = '';
 
             result.employees.forEach(emp => {
-                const row = `<tr>
-                    <td>${emp.id}</td>
-                    <td>${emp.name}</td>
-                    <td>${emp.hourly_wage.toLocaleString()}円</td>
-                    <td>${emp.is_admin ? '✔' : ''}</td>
-                </tr>`;
+                const row = `<tr><td>${emp.id}</td><td>${emp.name}</td><td>${emp.hourly_wage.toLocaleString()}円</td><td>${emp.is_admin ? '✔' : ''}</td></tr>`;
                 tableBody.insertAdjacentHTML('beforeend', row);
-                
                 const option = `<option value="${emp.id}">${emp.name}</option>`;
                 employeeSelect.insertAdjacentHTML('beforeend', option);
             });
@@ -564,14 +474,9 @@ function showAttendanceChart() {
     window.pywebview.api.get_attendance_summary(employeeId, startDate, endDate).then(result => {
         if (result.success) {
             document.getElementById('statistics-result').style.display = 'block';
-            
             const summary = result.summary;
             const summaryDiv = document.getElementById('summary-text');
-            summaryDiv.innerHTML = `
-                <strong>期間合計:</strong> ${summary.total_hours.toFixed(2)}時間 <br>
-                <strong>概算給与:</strong> ${Math.round(summary.total_wage).toLocaleString()}円 (時給: ${summary.hourly_wage.toLocaleString()}円)
-            `;
-            
+            summaryDiv.innerHTML = `<strong>期間合計:</strong> ${summary.total_hours.toFixed(2)}時間 <br><strong>概算給与:</strong> ${Math.round(summary.total_wage).toLocaleString()}円 (時給: ${summary.hourly_wage.toLocaleString()}円)`;
             drawChart(result.labels, result.data);
         } else {
             alert(`エラー: ${result.message}`);
@@ -581,11 +486,9 @@ function showAttendanceChart() {
 
 function drawChart(labels, data) {
     const ctx = document.getElementById('attendance-chart').getContext('2d');
-    
     if (attendanceChart) {
         attendanceChart.destroy();
     }
-
     attendanceChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -599,28 +502,11 @@ function drawChart(labels, data) {
             }]
         },
         options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: '時間'
-                    }
-                }
-            },
+            scales: { y: { beginAtZero: true, title: { display: true, text: '時間' } } },
             responsive: true,
             maintainAspectRatio: false
         }
     });
-}
-
-function startTimeUpdater() {
-    const timeDisplay = document.getElementById('current-time');
-    if (timeInterval) clearInterval(timeInterval);
-    timeInterval = setInterval(() => {
-        const now = new Date();
-        timeDisplay.textContent = now.toLocaleTimeString('ja-JP');
-    }, 1000);
 }
 
 function setDefaultDates() {
@@ -628,9 +514,143 @@ function setDefaultDates() {
     const endDateInput = document.getElementById('end-date');
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
     const formatDate = (date) => date.toISOString().split('T')[0];
-
-    if(startDateInput) startDateInput.value = formatDate(firstDayOfMonth);
-    if(endDateInput) endDateInput.value = formatDate(today);
+    if (startDateInput) startDateInput.value = formatDate(firstDayOfMonth);
+    if (endDateInput) endDateInput.value = formatDate(today);
 }
+
+
+// --- 1回限りのリスナー設定 ---
+function setupMainViewListeners() {
+    if (isMainViewInitialized) return;
+    document.getElementById('btn-clock-in').addEventListener('click', () => handleAttendance('clock_in'));
+    document.getElementById('btn-clock-out').addEventListener('click', () => handleAttendance('clock_out'));
+    document.getElementById('btn-start-break').addEventListener('click', () => handleAttendance('start_break'));
+    document.getElementById('btn-end-break').addEventListener('click', () => handleAttendance('end_break'));
+    document.getElementById('btn-goto-admin').addEventListener('click', () => {
+        setupAdminViewListeners();
+        showView('admin');
+        loadEmployees();
+    });
+    document.getElementById('btn-logout').addEventListener('click', handleManualLogout);
+    isMainViewInitialized = true;
+}
+
+function setupAdminViewListeners() {
+    if (isAdminViewInitialized) return;
+    document.getElementById('btn-back-to-main').addEventListener('click', () => showView('main'));
+    document.getElementById('add-employee-form').addEventListener('submit', handleAddEmployee);
+    document.getElementById('btn-show-chart').addEventListener('click', showAttendanceChart);
+    setDefaultDates();
+    isAdminViewInitialized = true;
+}
+
+
+// ===================================================
+//  アプリケーション初期化 (エントリーポイント)
+// ===================================================
+window.addEventListener('pywebviewready', () => {
+    // --- DOM要素取得 ---
+    views = {
+        login: document.getElementById('login-view'),
+        main: document.getElementById('main-view'),
+        admin: document.getElementById('admin-view'),
+    };
+    eventModalOverlay = document.getElementById('event-modal-overlay');
+    eventForm = document.getElementById('event-form');
+    dailyEventsDateEl = document.getElementById('daily-events-date');
+    dailyEventsListEl = document.getElementById('daily-events-list');
+    eventListViewEl = document.getElementById('admin-event-list-view');
+
+    // --- イベントリスナー設定 ---
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+
+    // ログイン画面カレンダー
+    document.getElementById('prev-month-btn').addEventListener('click', () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        generateCalendar({ date: currentCalendarDate, bodyId: 'calendar-body', yearMonthId: 'calendar-year-month', isAdmin: false });
+    });
+    document.getElementById('next-month-btn').addEventListener('click', () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        generateCalendar({ date: currentCalendarDate, bodyId: 'calendar-body', yearMonthId: 'calendar-year-month', isAdmin: false });
+    });
+
+    // 管理者画面カレンダー
+    const adminCalendarBody = document.getElementById('admin-calendar-body');
+    adminCalendarBody.addEventListener('mouseover', (e) => {
+        const cell = e.target.closest('td[data-date]');
+        if (cell) displayDailyEvents(cell.dataset.date);
+    });
+    adminCalendarBody.addEventListener('click', (e) => {
+        const cell = e.target.closest('td[data-date]');
+        if (cell) openEventModal(new Date(cell.dataset.date + 'T00:00:00'));
+    });
+    document.getElementById('admin-prev-month-btn').addEventListener('click', () => {
+        currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() - 1);
+        generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true });
+    });
+    document.getElementById('admin-next-month-btn').addEventListener('click', () => {
+        currentAdminCalendarDate.setMonth(currentAdminCalendarDate.getMonth() + 1);
+        generateCalendar({ date: currentAdminCalendarDate, bodyId: 'admin-calendar-body', yearMonthId: 'admin-calendar-year-month', isAdmin: true });
+    });
+
+    // イベントモーダル
+    document.getElementById('event-cancel-btn').addEventListener('click', closeEventModal);
+    eventForm.addEventListener('submit', handleSaveEvent);
+    document.getElementById('event-allday').addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        const startInput = document.getElementById('event-start');
+        const endInput = document.getElementById('event-end');
+
+        // 日付部分を保持
+        const startDate = startInput.value.slice(0, 10);
+        const endDate = endInput.value.slice(0, 10);
+
+        startInput.type = isChecked ? 'date' : 'datetime-local';
+        endInput.type = isChecked ? 'date' : 'datetime-local';
+
+        // 値を再設定
+        if (isChecked) {
+            startInput.value = startDate;
+            endInput.value = endDate;
+        } else {
+            startInput.value = startDate + 'T09:00';
+            endInput.value = endDate + 'T10:00';
+        }
+    });
+
+    // 表示切替ボタン
+    document.getElementById('event-view-toggle').addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON') return;
+        const view = e.target.dataset.view;
+
+        document.querySelectorAll('#event-view-toggle .toggle-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+
+        if (view === 'calendar') {
+            document.getElementById('admin-event-manager').style.display = 'grid';
+            eventListViewEl.style.display = 'none';
+        } else {
+            document.getElementById('admin-event-manager').style.display = 'none';
+            eventListViewEl.style.display = 'block';
+            renderEventListView();
+        }
+    });
+
+    // 詳細・一覧リストの親要素
+    [dailyEventsListEl, eventListViewEl].forEach(el => {
+        el.addEventListener('click', (e) => {
+            const eventId = e.target.dataset.eventId;
+            if (!eventId) return;
+
+            if (e.target.classList.contains('edit-btn')) {
+                handleEditEvent(eventId);
+            } else if (e.target.classList.contains('delete-btn')) {
+                handleDeleteEvent(eventId);
+            }
+        });
+    });
+
+    // --- 初期表示 ---
+    showView('login');
+});
