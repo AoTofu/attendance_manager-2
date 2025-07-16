@@ -285,6 +285,25 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     gap: 25px;
 }
 
+#admin-calendar-wrapper {
+    /* 既存のスタイル */
+    display: flex; /* ヘッダー要素を横並びにするために追加 */
+    flex-direction: column; /* ヘッダーとテーブルを縦に並べる */
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.calendar-table {
+    width: 100%; /* テーブルを親要素いっぱいに広げる */
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
 #daily-events-panel {
     border: 1px solid #eee;
     padding: 15px;

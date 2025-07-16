@@ -202,14 +202,19 @@ function handleSaveEvent(e) {
 }
 
 function displayDailyEvents(dateString) {
-    const date = new Date(dateString + 'T00:00:00'); // 正確な日付オブジェクト
+    const date = new Date(dateString + 'T00:00:00');
     dailyEventsDateEl.textContent = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日のイベント`;
     dailyEventsListEl.innerHTML = '';
-    
+
     const dayEvents = adminMonthlyEvents.filter(e => {
-        const eventStart = new Date(e.start_datetime.split(' ')[0]);
-        const eventEnd = new Date(e.end_datetime.split(' ')[0]);
-        return date >= eventStart && date <= eventEnd;
+        const eventStart = new Date(e.start_datetime);
+        const eventEnd = new Date(e.end_datetime);
+        // 日付のみを比較
+        const eventStartDateOnly = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+        const eventEndDateOnly = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
+        const currentDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+        return currentDateOnly >= eventStartDateOnly && currentDateOnly <= eventEndDateOnly;
     });
 
     if (dayEvents.length === 0) {
