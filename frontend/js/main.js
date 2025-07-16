@@ -194,6 +194,10 @@ function setupMainViewListeners() {
         loadEmployees();
     });
 
+    // ▼▼▼ 追加 ▼▼▼
+    document.getElementById('btn-logout').addEventListener('click', handleManualLogout);
+    // ▲▲▲ 追加 ▲▲▲
+
     isMainViewInitialized = true;
 }
 
@@ -209,6 +213,20 @@ function setupAdminViewListeners() {
 }
 
 // ===== 機能別関数 =====
+
+// ▼▼▼ 追加 ▼▼▼
+/**
+ * 手動ログアウト処理
+ */
+function handleManualLogout() {
+    console.log("手動ログアウトを実行します。");
+    stopInactivityObserver(); // 無操作タイマーを停止
+    window.pywebview.api.logout().then(() => {
+        showView('login'); // ログイン画面に遷移
+    });
+}
+// ▲▲▲ 追加 ▲▲▲
+
 
 function handleLogin(e) {
     e.preventDefault();
