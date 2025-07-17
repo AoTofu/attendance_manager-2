@@ -26,103 +26,13 @@ class Api:
             print("ログイン失敗: ユーザー名またはパスワードが違います。")
             return { 'success': False, 'message': 'ユーザー名またはパスワードが正しくありません。' }
 
-    # ▼▼▼ 追加 ▼▼▼
     def logout(self):
         """ユーザーをログアウトさせ、セッション情報をクリアする"""
         print(f"ログアウト実行: user={self.current_user}")
         self.current_user = None
         return {'success': True, 'message': 'ログアウトしました。'}
-    # ▲▲▲ 追加 ▲▲▲
 
-    # ▼▼▼ 追加 ▼▼▼
-    def get_events_for_month(self, year, month):
-        """指定された年月のイベントを取得する"""
-        try:
-            # 月の最初の日と最後の日を計算
-            start_of_month = datetime.datetime(year, month, 1)
-            # 月末日を計算
-            if month == 12:
-                end_of_month = datetime.datetime(year + 1, 1, 1) - datetime.timedelta(seconds=1)
-            else:
-                end_of_month = datetime.datetime(year, month + 1, 1) - datetime.timedelta(seconds=1)
-
-            conn = get_db_connection()
-            # 期間内に少しでも重なるイベントを取得
-            records = conn.execute(
-                "SELECT * FROM events WHERE start_datetime <= ? AND end_datetime >= ? ORDER BY start_datetime",
-                (end_of_month.strftime('%Y-%m-%d %H:%M:%S'), start_of_month.strftime('%Y-%m-%d %H:%M:%S'))
-            ).fetchall()
-            conn.close()
-            
-            events = [dict(row) for row in records]
-            return {'success': True, 'events': events}
-        except Exception as e:
-            print(f"イベント取得エラー: {e}")
-            return {'success': False, 'message': 'イベントの取得に失敗しました。'}
-
-    def add_event(self, title, description, start_str, end_str, is_allday):
-        """新しいイベントを追加する (管理者のみ)"""
-        if not self.current_user or not self.current_user['is_admin']:
-            return {'success': False, 'message': '権限がありません。'}
-        
-        if not title or not start_str or not end_str:
-            return {'success': False, 'message': 'タイトルと日時は必須です。'}
-
-        if start_str > end_str:
-            return {'success': False, 'message': '終了日時は開始日時より後に設定してください。'}
-
-        try:
-            conn = get_db_connection()
-            conn.execute(
-                "INSERT INTO events (title, description, start_datetime, end_datetime, is_allday) VALUES (?, ?, ?, ?, ?)",
-                (title, description, start_str, end_str, 1 if is_allday else 0)
-            )
-            conn.commit()
-            conn.close()
-            return {'success': True}
-        except Exception as e:
-            print(f"イベント追加エラー: {e}")
-            return {'success': False, 'message': 'イベントの追加に失敗しました。'}
-    # ▲▲▲ 追加 ▲▲▲
-
-    def update_event(self, event_id, title, description, start_str, end_str, is_allday):
-        """既存のイベントを更新する (管理者のみ)"""
-        if not self.current_user or not self.current_user["is_admin"]:
-            return {"success": False, "message": "権限がありません。"}
-        
-        if not title or not start_str or not end_str:
-            return {"success": False, "message": "タイトルと日時は必須です。"}
-
-        if start_str > end_str:
-            return {"success": False, "message": "終了日時は開始日時より後に設定してください。"}
-
-        try:
-            conn = get_db_connection()
-            conn.execute(
-                "UPDATE events SET title=?, description=?, start_datetime=?, end_datetime=?, is_allday=? WHERE id=?",
-                (title, description, start_str, end_str, 1 if is_allday else 0, event_id)
-            )
-            conn.commit()
-            conn.close()
-            return {"success": True}
-        except Exception as e:
-            print(f"イベント更新エラー: {e}")
-            return {"success": False, "message": "イベントの更新に失敗しました。"}
-
-    def delete_event(self, event_id):
-        """イベントを削除する (管理者のみ)"""
-        if not self.current_user or not self.current_user["is_admin"]:
-            return {"success": False, "message": "権限がありません。"}
-        
-        try:
-            conn = get_db_connection()
-            conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
-            conn.commit()
-            conn.close()
-            return {"success": True}
-        except Exception as e:
-            print(f"イベント削除エラー: {e}")
-            return {"success": False, "message": "イベントの削除に失敗しました。"}
+    # イベント関連のメソッド (get_events_for_month, add_event, update_event, delete_event) を削除
 
     def record_attendance(self, event_type):
         if not self.current_user:
