@@ -60,7 +60,23 @@
                 <h1>管理者モード</h1>
                 <button id="btn-back-to-main">メイン画面に戻る</button>
             </header>
-            
+
+            <div class="panel">
+                <h2>イベント管理</h2>
+                <div id="calendar-controls">
+                    <div class="nav-buttons">
+                        <button id="prev-month-btn">&lt; 前</button>
+                        <button id="today-btn">今日</button>
+                        <button id="next-month-btn">次 &gt;</button>
+                    </div>
+                    <h3 id="calendar-title">2025年 7月</h3>
+                    <div class="view-buttons">
+                        <button id="month-view-btn" class="active">月</button>
+                        </div>
+                </div>
+                <div id="calendar-grid">
+                    </div>
+            </div>
             <div class="panel">
                 <h2>勤怠データ集計</h2>
                 <div id="statistics-controls" class="statistics-controls-grid">
@@ -129,6 +145,39 @@
         </div>
     </div>
 
+    <div id="event-modal-overlay" class="view">
+        <div id="event-modal-content">
+            <h2 id="event-modal-title">イベントを追加</h2>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <div class="form-group">
+                    <label for="event-title">タイトル</label>
+                    <input type="text" id="event-title" required>
+                </div>
+                <div class="form-group-checkbox">
+                    <input type="checkbox" id="event-allday">
+                    <label for="event-allday">終日</label>
+                </div>
+                <div class="form-group">
+                    <label for="event-start">開始日時</label>
+                    <input type="datetime-local" id="event-start" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-end">終了日時</label>
+                    <input type="datetime-local" id="event-end" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-description">説明</label>
+                    <textarea id="event-description" rows="3"></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" id="delete-event-btn">削除</button>
+                    <button type="submit" id="save-event-btn">保存</button>
+                    <button type="button" id="cancel-event-btn">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script src="js/main.js"></script>
 </body>
 </html>
