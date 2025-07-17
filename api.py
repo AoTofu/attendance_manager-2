@@ -4,6 +4,7 @@ import itertools
 from werkzeug.security import check_password_hash, generate_password_hash
 from database import get_db_connection
 
+
 class Api:
     def __init__(self):
         self.current_user = None
@@ -11,7 +12,8 @@ class Api:
     def login(self, name, password):
         print(f"ログイン試行: name={name}")
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM employees WHERE name = ?', (name,)).fetchone()
+        user = conn.execute(
+            'SELECT * FROM employees WHERE name = ?', (name,)).fetchone()
         conn.close()
 
         if user and check_password_hash(user['password'], password):
@@ -21,10 +23,10 @@ class Api:
                 'is_admin': bool(user['is_admin'])
             }
             print(f"ログイン成功: {self.current_user}")
-            return { 'success': True, 'user': self.current_user }
+            return {'success': True, 'user': self.current_user}
         else:
             print("ログイン失敗: ユーザー名またはパスワードが違います。")
-            return { 'success': False, 'message': 'ユーザー名またはパスワードが正しくありません。' }
+            return {'success': False, 'message': 'ユーザー名またはパスワードが正しくありません。'}
 
     def logout(self):
         """ユーザーをログアウトさせ、セッション情報をクリアする"""
@@ -32,7 +34,78 @@ class Api:
         self.current_user = None
         return {'success': True, 'message': 'ログアウトしました。'}
 
-    # イベント関連のメソッド (get_events_for_month, add_event, update_event, delete_event) を削除
+    # ▼▼▼ ここから追加 ▼▼▼
+    def get_events(self, start_date_str, end_date_str):
+        """指定された期間内のイベントを取得する"""
+        try:
+            conn = get_db_connection()
+            # 期間内に少しでも重なるイベントを取得
+            # イベントの終了日時が期間の開始より後 AND イベントの開始日時が期間の終了より前
+            records = conn.execute(
+                "SELECT * FROM events WHERE start_datetime < ? AND end_datetime > ? ORDER BY start_datetime",
+                (end_date_str, start_date_str)
+            ).fetchall()
+            conn.close()
+
+            events = [dict(row) for row in records]
+            return {'success': True, 'events': events}
+        except Exception as e:
+            print(f"イベント取得エラー: {e}")
+            return {'success': False, 'message': 'イベントの取得に失敗しました。'}
+
+    def add_event(self, title, description, start_datetime, end_datetime, is_allday):
+        """新しいイベントを追加する (管理者のみ)"""
+        if not self.current_user or not self.current_user['is_admin']:
+            return {'success': False, 'message': '権限がありません。'}
+
+        try:
+            conn = get_db_connection()
+            conn.execute(
+                "INSERT INTO events (title, description, start_datetime, end_datetime, is_allday) VALUES (?, ?, ?, ?, ?)",
+                (title, description, start_datetime,
+                 end_datetime, 1 if is_allday else 0)
+            )
+            conn.commit()
+            conn.close()
+            return {'success': True}
+        except Exception as e:
+            print(f"イベント追加エラー: {e}")
+            return {'success': False, 'message': 'イベントの追加に失敗しました。'}
+
+    def update_event(self, event_id, title, description, start_datetime, end_datetime, is_allday):
+        """既存のイベントを更新する (管理者のみ)"""
+        if not self.current_user or not self.current_user["is_admin"]:
+            return {"success": False, "message": "権限がありません。"}
+
+        try:
+            conn = get_db_connection()
+            conn.execute(
+                "UPDATE events SET title=?, description=?, start_datetime=?, end_datetime=?, is_allday=? WHERE id=?",
+                (title, description, start_datetime,
+                 end_datetime, 1 if is_allday else 0, event_id)
+            )
+            conn.commit()
+            conn.close()
+            return {"success": True}
+        except Exception as e:
+            print(f"イベント更新エラー: {e}")
+            return {"success": False, "message": "イベントの更新に失敗しました。"}
+
+    def delete_event(self, event_id):
+        """イベントを削除する (管理者のみ)"""
+        if not self.current_user or not self.current_user["is_admin"]:
+            return {"success": False, "message": "権限がありません。"}
+
+        try:
+            conn = get_db_connection()
+            conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+            conn.commit()
+            conn.close()
+            return {"success": True}
+        except Exception as e:
+            print(f"イベント削除エラー: {e}")
+            return {"success": False, "message": "イベントの削除に失敗しました。"}
+    # ▲▲▲ ここまで追加 ▲▲▲
 
     def record_attendance(self, event_type):
         if not self.current_user:
@@ -41,7 +114,8 @@ class Api:
         print(f"勤怠記録: user_id={employee_id}, event_type={event_type}")
         try:
             conn = get_db_connection()
-            conn.execute("INSERT INTO attendance_records (employee_id, event_type) VALUES (?, ?)", (employee_id, event_type))
+            conn.execute(
+                "INSERT INTO attendance_records (employee_id, event_type) VALUES (?, ?)", (employee_id, event_type))
             conn.commit()
             conn.close()
             return {'success': True}
@@ -54,7 +128,8 @@ class Api:
             return {'status': 'logged_out'}
         employee_id = self.current_user['id']
         conn = get_db_connection()
-        record = conn.execute("SELECT event_type FROM attendance_records WHERE employee_id = ? ORDER BY timestamp DESC LIMIT 1", (employee_id,)).fetchone()
+        record = conn.execute(
+            "SELECT event_type FROM attendance_records WHERE employee_id = ? ORDER BY timestamp DESC LIMIT 1", (employee_id,)).fetchone()
         conn.close()
         if record:
             return {'status': record['event_type']}
@@ -65,7 +140,8 @@ class Api:
         if not self.current_user or not self.current_user['is_admin']:
             return {'success': False, 'message': '権限がありません。'}
         conn = get_db_connection()
-        employees = conn.execute("SELECT id, name, hourly_wage, is_admin FROM employees ORDER BY id").fetchall()
+        employees = conn.execute(
+            "SELECT id, name, hourly_wage, is_admin FROM employees ORDER BY id").fetchall()
         conn.close()
         employees_list = [dict(row) for row in employees]
         return {'success': True, 'employees': employees_list}
@@ -76,9 +152,11 @@ class Api:
         if not name or not password:
             return {'success': False, 'message': '名前とパスワードは必須です。'}
         try:
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+            hashed_password = generate_password_hash(
+                password, method='pbkdf2:sha256')
             conn = get_db_connection()
-            conn.execute("INSERT INTO employees (name, password, hourly_wage, is_admin) VALUES (?, ?, ?, ?)", (name, hashed_password, float(hourly_wage), 1 if is_admin else 0))
+            conn.execute("INSERT INTO employees (name, password, hourly_wage, is_admin) VALUES (?, ?, ?, ?)",
+                         (name, hashed_password, float(hourly_wage), 1 if is_admin else 0))
             conn.commit()
             conn.close()
             return {'success': True}
@@ -87,17 +165,19 @@ class Api:
         except Exception as e:
             print(f"従業員追加エラー: {e}")
             return {'success': False, 'message': 'データベースエラーが発生しました。'}
-            
+
     def get_attendance_summary(self, employee_id, start_date_str, end_date_str):
         if not self.current_user or not self.current_user['is_admin']:
             return {'success': False, 'message': '権限がありません。'}
 
         try:
             start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
-            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d') + datetime.timedelta(days=1)
+            end_date = datetime.datetime.strptime(
+                end_date_str, '%Y-%m-%d') + datetime.timedelta(days=1)
 
             conn = get_db_connection()
-            employee = conn.execute("SELECT hourly_wage FROM employees WHERE id = ?", (employee_id,)).fetchone()
+            employee = conn.execute(
+                "SELECT hourly_wage FROM employees WHERE id = ?", (employee_id,)).fetchone()
             if not employee:
                 conn.close()
                 return {'success': False, 'message': '従業員が見つかりません。'}
@@ -113,11 +193,12 @@ class Api:
             for date_obj, group in itertools.groupby(records, key=lambda r: datetime.datetime.strptime(r['timestamp'], '%Y-%m-%d %H:%M:%S').date()):
                 day_str = date_obj.strftime('%Y-%m-%d')
                 total_work_seconds = 0
-                
+
                 last_start_time = None
                 for record in group:
                     event_type = record['event_type']
-                    timestamp = datetime.datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
+                    timestamp = datetime.datetime.strptime(
+                        record['timestamp'], '%Y-%m-%d %H:%M:%S')
 
                     if event_type in ('clock_in', 'end_break'):
                         last_start_time = timestamp
@@ -125,18 +206,20 @@ class Api:
                         duration = timestamp - last_start_time
                         total_work_seconds += duration.total_seconds()
                         last_start_time = None
-                
+
                 daily_work_hours[day_str] = total_work_seconds / 3600
 
             labels = []
-            current_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date_only = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            current_date = datetime.datetime.strptime(
+                start_date_str, '%Y-%m-%d').date()
+            end_date_only = datetime.datetime.strptime(
+                end_date_str, '%Y-%m-%d').date()
             while current_date <= end_date_only:
                 labels.append(current_date.strftime('%Y-%m-%d'))
                 current_date += datetime.timedelta(days=1)
 
             data = [daily_work_hours.get(label, 0) for label in labels]
-            
+
             total_hours = sum(data)
             total_wage = total_hours * hourly_wage
 

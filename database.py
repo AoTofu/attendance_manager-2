@@ -38,7 +38,20 @@ def create_tables():
         )
     ''')
 
-    # eventsテーブルの作成処理を削除
+    # ▼▼▼ ここから追加 ▼▼▼
+    # eventsテーブル
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            start_datetime TEXT NOT NULL,
+            end_datetime TEXT NOT NULL,
+            is_allday INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # ▲▲▲ ここまで追加 ▲▲▲
     
     print("テーブルの準備ができました。")
     conn.commit()
