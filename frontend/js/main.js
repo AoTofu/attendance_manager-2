@@ -11,13 +11,11 @@ let isAdminViewInitialized = false;
 
 let views = {};
 
-// ▼▼▼ ここから追加 ▼▼▼
 let currentDate = new Date();
 let eventsCache = [];
 
 // DOM要素
 let calendarGrid, calendarTitle, eventModalOverlay, eventForm, eventModalTitle, deleteEventBtn;
-// ▲▲▲ ここまで追加 ▲▲▲
 
 
 // ===================================================
@@ -46,11 +44,9 @@ function showView(viewName) {
         if (timeInterval) clearInterval(timeInterval);
     }
     
-    // ▼▼▼ ここから追加 ▼▼▼
     if (viewName === 'admin' && !isAdminViewInitialized) {
         initializeAdminView();
     }
-    // ▲▲▲ ここまで追加 ▲▲▲
 }
 
 // --- 自動ログアウト関連 ---
@@ -83,7 +79,6 @@ function stopInactivityObserver() {
 }
 
 
-// ▼▼▼ ここから追加 ▼▼▼
 // --- カレンダー関連 ---
 
 /**
@@ -100,7 +95,7 @@ async function renderCalendar() {
     const fetchStartDate = new Date(startOfMonth);
     fetchStartDate.setDate(fetchStartDate.getDate() - 7);
     const fetchEndDate = new Date(endOfMonth);
-    fetchEndDate.setDate(fetchEndDate.getDate() + 7);
+    fetchEndDate.setDate(fetchEndDate.getDate() + 8); // 翌月の1週目までカバー
 
     const result = await window.pywebview.api.get_events(
         formatDateForAPI(fetchStartDate), 
@@ -134,24 +129,29 @@ function renderMonthView(date, events) {
     const month = date.getMonth();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
 
     let dayCounter = 1;
     for (let i = 0; i < 42; i++) { // 最大6週間 x 7日 = 42マス
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day-cell';
+        
+        const dateNumber = document.createElement('span');
+        dateNumber.className = 'date-number';
 
-        if (i >= firstDayOfMonth && dayCounter <= daysInMonth) {
+        if (i < firstDayOfMonth) {
+            // 前の月
+            dayCell.classList.add('other-month');
+            dateNumber.textContent = prevMonthDays - firstDayOfMonth + i + 1;
+        } else if (dayCounter <= daysInMonth) {
+            // 今月
             const cellDate = new Date(year, month, dayCounter);
-            dayCell.dataset.date = formatDateForAPI(cellDate).split('T')[0];
-
-            const dateNumber = document.createElement('span');
-            dateNumber.className = 'date-number';
+            dayCell.dataset.date = formatDateForInput(cellDate, true);
             dateNumber.textContent = dayCounter;
             
             if (isToday(cellDate)) {
                 dateNumber.classList.add('today');
             }
-            dayCell.appendChild(dateNumber);
             
             // この日のイベントをフィルタリングして表示
             const dayEvents = events.filter(e => isEventOnDate(e, cellDate));
@@ -165,11 +165,13 @@ function renderMonthView(date, events) {
                 });
                 dayCell.appendChild(eventDiv);
             });
-
             dayCounter++;
         } else {
+            // 次の月
             dayCell.classList.add('other-month');
+            dateNumber.textContent = i - daysInMonth - firstDayOfMonth + 1;
         }
+        dayCell.appendChild(dateNumber);
         calendarGrid.appendChild(dayCell);
     }
 }
@@ -187,34 +189,35 @@ function openEventModal(date, event = null) {
         document.getElementById('event-id').value = event.id;
         document.getElementById('event-title').value = event.title;
         document.getElementById('event-description').value = event.description || '';
-        document.getElementById('event-allday').checked = event.is_allday;
+        const isAllday = event.is_allday === 1;
+        document.getElementById('event-allday').checked = isAllday;
         
-        const start = new Date(event.start_datetime);
-        const end = new Date(event.end_datetime);
+        // Pythonからの文字列をJSのDateオブジェクトに変換
+        const start = new Date(event.start_datetime.replace(' ', 'T'));
+        const end = new Date(event.end_datetime.replace(' ', 'T'));
         
-        if (event.is_allday) {
-            document.getElementById('event-start').type = 'date';
-            document.getElementById('event-end').type = 'date';
-            document.getElementById('event-start').value = formatDateForInput(start, true);
-            document.getElementById('event-end').value = formatDateForInput(end, true);
-        } else {
-            document.getElementById('event-start').type = 'datetime-local';
-            document.getElementById('event-end').type = 'datetime-local';
-            document.getElementById('event-start').value = formatDateForInput(start, false);
-            document.getElementById('event-end').value = formatDateForInput(end, false);
-        }
+        document.getElementById('event-start').type = isAllday ? 'date' : 'datetime-local';
+        document.getElementById('event-end').type = isAllday ? 'date' : 'datetime-local';
+        document.getElementById('event-start').value = formatDateForInput(start, isAllday);
+        document.getElementById('event-end').value = formatDateForInput(end, isAllday);
+
         deleteEventBtn.style.display = 'block';
 
     } else { // 新規作成モード
         eventModalTitle.textContent = 'イベントを追加';
         document.getElementById('event-id').value = '';
+        document.getElementById('event-allday').checked = false;
+        
         const start = new Date(date);
         start.setHours(9, 0, 0, 0); // デフォルト9時
         const end = new Date(date);
         end.setHours(10, 0, 0, 0); // デフォルト10時
 
+        document.getElementById('event-start').type = 'datetime-local';
+        document.getElementById('event-end').type = 'datetime-local';
         document.getElementById('event-start').value = formatDateForInput(start, false);
         document.getElementById('event-end').value = formatDateForInput(end, false);
+        
         deleteEventBtn.style.display = 'none';
     }
 
@@ -225,10 +228,75 @@ function closeEventModal() {
     views.eventModal.style.display = 'none';
 }
 
+// ▼▼▼ ここから追加 ▼▼▼
+/**
+ * イベントを保存（新規作成または更新）する
+ */
+async function handleSaveEvent(e) {
+    e.preventDefault();
+    const id = document.getElementById('event-id').value;
+    const title = document.getElementById('event-title').value;
+    const description = document.getElementById('event-description').value;
+    const is_allday = document.getElementById('event-allday').checked;
+    
+    let start_datetime = document.getElementById('event-start').value;
+    let end_datetime = document.getElementById('event-end').value;
+
+    // 終日設定の場合、時刻を追加
+    if (is_allday) {
+        start_datetime += ' 00:00:00';
+        end_datetime += ' 23:59:59';
+    } else {
+        start_datetime = start_datetime.replace('T', ' ') + ':00';
+        end_datetime = end_datetime.replace('T', ' ') + ':00';
+    }
+    
+    if (end_datetime <= start_datetime) {
+        alert('終了日時は開始日時より後に設定してください。');
+        return;
+    }
+
+    let result;
+    if (id) { // 更新
+        result = await window.pywebview.api.update_event(id, title, description, start_datetime, end_datetime, is_allday);
+    } else { // 新規作成
+        result = await window.pywebview.api.add_event(title, description, start_datetime, end_datetime, is_allday);
+    }
+    
+    if (result.success) {
+        closeEventModal();
+        renderCalendar(); // カレンダーを再描画
+    } else {
+        alert('エラー: ' + result.message);
+    }
+}
+
+/**
+ * イベントを削除する
+ */
+async function handleDeleteEvent() {
+    const id = document.getElementById('event-id').value;
+    if (!id) return;
+    
+    if (confirm('このイベントを本当に削除しますか？')) {
+        const result = await window.pywebview.api.delete_event(id);
+        if (result.success) {
+            closeEventModal();
+            renderCalendar();
+        } else {
+            alert('削除に失敗しました: ' + result.message);
+        }
+    }
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
 
 // --- ヘルパー関数 ---
 function formatDateForAPI(date) {
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    // UTCベースのISO文字列を生成し、タイムゾーン部分を削除
+    const tzoffset = date.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(date - tzoffset).toISOString().slice(0, 19);
+    return localISOTime.replace('T', ' ');
 }
 
 function formatDateForInput(date, isAllDay) {
@@ -251,17 +319,17 @@ function isToday(date) {
 }
 
 function isEventOnDate(event, date) {
-    const eventStart = new Date(event.start_datetime.replace(' ', 'T') + 'Z');
-    const eventEnd = new Date(event.end_datetime.replace(' ', 'T') + 'Z');
-    // タイムゾーンオフセットを考慮
-    const tzOffset = date.getTimezoneOffset() * 60000;
-    const dateStart = new Date(date.setHours(0, 0, 0, 0) - tzOffset);
-    const dateEnd = new Date(date.setHours(23, 59, 59, 999) - tzOffset);
+    // DBからの時刻はローカル時刻とみなす
+    const eventStart = new Date(event.start_datetime.replace(' ', 'T'));
+    const eventEnd = new Date(event.end_datetime.replace(' ', 'T'));
+    
+    const dateStart = new Date(date);
+    dateStart.setHours(0, 0, 0, 0);
+    const dateEnd = new Date(date);
+    dateEnd.setHours(23, 59, 59, 999);
+    
     return eventStart < dateEnd && eventEnd > dateStart;
 }
-
-// ▲▲▲ ここまで追加 ▲▲▲
-
 
 // --- メイン画面・勤怠関連 ---
 function handleLogin(e) {
@@ -469,7 +537,6 @@ function setupMainViewListeners() {
     isMainViewInitialized = true;
 }
 
-// ▼▼▼ `setupAdminViewListeners` を `initializeAdminView` に変更し、初回のみ実行されるように修正 ▼▼▼
 function initializeAdminView() {
     if (isAdminViewInitialized) return;
     
@@ -496,7 +563,8 @@ function initializeAdminView() {
     // カレンダーセルへのクリックイベント（イベント追加）
     calendarGrid.addEventListener('click', (e) => {
         const cell = e.target.closest('.calendar-day-cell');
-        if (cell && cell.dataset.date) {
+        // 他の月のセルでなく、かつイベント自身の上でない場合
+        if (cell && !cell.classList.contains('other-month') && e.target.closest('.calendar-event') === null) {
             openEventModal(new Date(cell.dataset.date));
         }
     });
@@ -515,22 +583,23 @@ window.addEventListener('pywebviewready', () => {
         login: document.getElementById('login-view'),
         main: document.getElementById('main-view'),
         admin: document.getElementById('admin-view'),
-        eventModal: document.getElementById('event-modal-overlay') // モーダルもviewsに追加
+        eventModal: document.getElementById('event-modal-overlay')
     };
-    // ▼▼▼ ここから追加 ▼▼▼
     calendarGrid = document.getElementById('calendar-grid');
     calendarTitle = document.getElementById('calendar-title');
     eventForm = document.getElementById('event-form');
     eventModalTitle = document.getElementById('event-modal-title');
     deleteEventBtn = document.getElementById('delete-event-btn');
-    // ▲▲▲ ここまで追加 ▲▲▲
     
     // --- イベントリスナー設定 ---
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     
-    // ▼▼▼ ここから追加 ▼▼▼
     // モーダル関連のイベントリスナー
     document.getElementById('cancel-event-btn').addEventListener('click', closeEventModal);
+    // ▼▼▼ ここから追加 ▼▼▼
+    eventForm.addEventListener('submit', handleSaveEvent);
+    deleteEventBtn.addEventListener('click', handleDeleteEvent);
+    // ▲▲▲ ここまで追加 ▲▲▲
     
     // 「終日」チェックボックスの挙動
     document.getElementById('event-allday').addEventListener('change', (e) => {
@@ -538,13 +607,13 @@ window.addEventListener('pywebviewready', () => {
         const startInput = document.getElementById('event-start');
         const endInput = document.getElementById('event-end');
 
+        // 値を一旦保持してフォーマット変更
+        const startDate = new Date(startInput.value.replace('T', ' ') || Date.now());
+        const endDate = new Date(endInput.value.replace('T', ' ') || Date.now());
+
         startInput.type = isChecked ? 'date' : 'datetime-local';
         endInput.type = isChecked ? 'date' : 'datetime-local';
         
-        // 値を一旦保持してフォーマット変更
-        const startDate = new Date(startInput.value || Date.now());
-        const endDate = new Date(endInput.value || Date.now());
-
         if(isChecked){
             startInput.value = formatDateForInput(startDate, true);
             endInput.value = formatDateForInput(endDate, true);
@@ -553,7 +622,6 @@ window.addEventListener('pywebviewready', () => {
             endInput.value = formatDateForInput(endDate, false);
         }
     });
-    // ▲▲▲ ここまで追加 ▲▲▲
 
     // --- 初期表示 ---
     showView('login');
