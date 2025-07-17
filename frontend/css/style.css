@@ -9,7 +9,6 @@ body {
     align-items: center;
     min-height: 100vh;
 }
-
 #app-container {
     width: 95%;
     max-width: 1200px;
@@ -17,43 +16,27 @@ body {
     background-color: #fff;
     padding: 25px;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     box-sizing: border-box;
 }
-
-h1 {
-    color: #444;
-}
-
-h2 {
-    margin-top: 0;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 5px;
-}
+h1 { color: #444; }
+h2 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
 
 /* --- フォーム関連 --- */
-.form-group {
-    margin-bottom: 15px;
-}
-
-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-input[type="text"],
-input[type="password"],
-input[type="number"],
-input[type="date"],
-select {
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 5px; font-weight: bold; }
+input[type="text"], input[type="password"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
     width: 100%;
     padding: 10px;
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-family: sans-serif;
+    font-size: 1em;
 }
-
+textarea {
+    resize: vertical;
+}
 button {
     padding: 10px 15px;
     background-color: #007bff;
@@ -64,97 +47,38 @@ button {
     transition: background-color 0.2s;
     font-size: 1em;
 }
-
-button:hover {
-    background-color: #0056b3;
-}
-
-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-.form-group-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-}
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+.form-group-checkbox { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.form-group-checkbox input { width: auto; }
 
 /* --- メッセージ表示 --- */
-.error-message {
-    color: #d9534f;
-    margin-bottom: 10px;
-    font-weight: bold;
-}
-
-.message {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 4px;
-}
-
-.message.success {
-    color: #155724;
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-}
-
-.message.error {
-    color: #721c24;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-}
+.error-message { color: #d9534f; margin-bottom: 10px; font-weight: bold; }
+.message { margin-top: 15px; padding: 10px; border-radius: 4px; }
+.message.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+.message.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
 
 /* --- ヘッダー --- */
-.main-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-}
-
-.time-display {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #555;
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
+.main-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+.time-display { font-size: 1.5em; font-weight: bold; color: #555; }
+.header-controls { display: flex; align-items: center; gap: 20px; }
 #btn-logout {
     background-color: #6c757d;
-    /* グレー系の色 */
     font-size: 0.9em;
     padding: 8px 12px;
 }
-
 #btn-logout:hover {
     background-color: #5a6268;
 }
 
 /* --- 各ビューのレイアウト --- */
-.view {
-    display: none;
-    /* デフォルトは非表示 */
-}
-
-/* ▼▼▼ ログイン画面のレイアウトを修正 ▼▼▼ */
+.view { display: none; }
 #login-view {
     display: flex;
-    /* gridからflexに変更 */
     justify-content: center;
-    /* 中央寄せ */
     align-items: center;
     min-height: 80vh;
 }
-
 #login-form-panel {
     padding: 30px;
     border: 1px solid #ddd;
@@ -162,18 +86,12 @@ button:disabled {
     background-color: #fdfdfd;
     width: 100%;
     max-width: 400px;
-    /* フォームの最大幅を指定 */
 }
-
-/* ▲▲▲ ログイン画面のレイアウトを修正 ▲▲▲ */
-
-
 #main-view {
     display: none;
     max-width: 600px;
     margin: 0 auto;
 }
-
 #admin-view {
     display: none;
     flex-direction: column;
@@ -181,98 +99,156 @@ button:disabled {
 }
 
 /* --- パネル共通スタイル --- */
-.panel {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    background-color: #fdfdfd;
-}
-
-.dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
+.panel { border: 1px solid #ddd; border-radius: 8px; padding: 20px; background-color: #fdfdfd; }
+.dashboard { display: flex; flex-direction: column; gap: 30px; }
 
 /* --- メイン画面のボタンなど --- */
-.action-buttons {
+.action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.attendance-btn { padding: 20px; font-size: 1.2em; }
+.status-message { margin-top: 20px; font-size: 1.2em; font-weight: bold; text-align: center; padding: 10px; background-color: #e9ecef; border-radius: 4px; }
+#btn-goto-admin { width: 100%; padding: 15px; background-color: #28a745; }
+#btn-goto-admin:hover { background-color: #218838; }
+
+/* ▼▼▼ ここから追加 ▼▼▼ */
+/* --- カレンダーコントロール --- */
+#calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+#calendar-controls .nav-buttons, #calendar-controls .view-buttons {
+    display: flex;
+    gap: 5px;
+}
+#calendar-title {
+    margin: 0;
+    font-size: 1.5em;
+    color: #333;
+}
+#calendar-controls button {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+}
+#calendar-controls button.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* --- カレンダーグリッド --- */
+#calendar-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    grid-template-columns: repeat(7, 1fr);
+    border-top: 1px solid #ddd;
+    border-left: 1px solid #ddd;
 }
-
-.attendance-btn {
-    padding: 20px;
-    font-size: 1.2em;
-}
-
-.status-message {
-    margin-top: 20px;
-    font-size: 1.2em;
+.calendar-header-cell {
     font-weight: bold;
     text-align: center;
-    padding: 10px;
-    background-color: #e9ecef;
-    border-radius: 4px;
+    padding: 8px 0;
+    background-color: #f8f9fa;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
 }
-
-#btn-goto-admin {
-    width: 100%;
-    padding: 15px;
-    background-color: #28a745;
-}
-
-#btn-goto-admin:hover {
-    background-color: #218838;
-}
-
-/* --- 管理者画面のレイアウト --- */
-.admin-panels {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 30px;
-}
-
-.statistics-controls-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    align-items: end;
-}
-
-.summary-box {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #e9ecef;
-    border-radius: 4px;
-    line-height: 1.6;
-}
-
-.chart-container {
-    position: relative;
-    height: 350px;
-}
-
-#employee-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#employee-table th,
-#employee-table td {
-    border: 1px solid #ddd;
+.calendar-day-cell {
+    min-height: 120px;
     padding: 8px;
-    text-align: left;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    position: relative;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.calendar-day-cell:hover {
+    background-color: #f8f9fa;
+}
+.calendar-day-cell.other-month .date-number {
+    color: #ccc;
+}
+.date-number {
+    font-size: 0.9em;
+    font-weight: bold;
+}
+.date-number.today {
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 1.8em;
+    height: 1.8em;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+.calendar-event {
+    font-size: 0.85em;
+    padding: 3px 5px;
+    margin-top: 4px;
+    background-color: #e7f5ff;
+    border-left: 3px solid #007bff;
+    border-radius: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
 }
 
-#employee-table th {
-    background-color: #f2f2f2;
+/* --- イベントモーダル --- */
+#event-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
-
-#btn-back-to-main {
+#event-modal-content {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+.modal-buttons button {
+    flex-grow: 1;
+}
+#save-event-btn {
+    flex-grow: 2; /* 保存ボタンを少し大きくする */
+}
+#cancel-event-btn {
     background-color: #6c757d;
 }
-
-#btn-back-to-main:hover {
+#cancel-event-btn:hover {
     background-color: #5a6268;
 }
+#delete-event-btn {
+    background-color: #dc3545;
+}
+#delete-event-btn:hover {
+    background-color: #c82333;
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
+
+/* --- 管理者画面のレイアウト --- */
+.admin-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+.statistics-controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+.summary-box { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; line-height: 1.6; }
+.chart-container { position: relative; height: 350px; }
+#employee-table { width: 100%; border-collapse: collapse; }
+#employee-table th, #employee-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+#employee-table th { background-color: #f2f2f2; }
+#btn-back-to-main { background-color: #6c757d; }
+#btn-back-to-main:hover { background-color: #5a6268; }
