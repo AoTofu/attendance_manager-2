@@ -25,7 +25,7 @@ h2 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
 /* --- フォーム関連 --- */
 .form-group { margin-bottom: 15px; }
 label { display: block; margin-bottom: 5px; font-weight: bold; }
-input[type="text"], input[type="password"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
+input, select, textarea {
     width: 100%;
     padding: 10px;
     box-sizing: border-box;
@@ -74,26 +74,47 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 /* --- 各ビューのレイアウト --- */
 .view { display: none; }
 #login-view {
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 40px;
     align-items: center;
     min-height: 80vh;
+}
+#login-info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 #login-form-panel {
     padding: 30px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background-color: #fdfdfd;
-    width: 100%;
-    max-width: 400px;
 }
+#login-clock-date {
+    text-align: center;
+    padding: 20px;
+    background-color: #e9ecef;
+    border-radius: 8px;
+}
+#login-time {
+    font-size: 3em;
+    margin: 0;
+    color: #333;
+    letter-spacing: 2px;
+}
+#login-date {
+    font-size: 1.2em;
+    margin: 5px 0 0;
+    color: #555;
+}
+
 #main-view {
-    display: none;
     max-width: 600px;
     margin: 0 auto;
 }
 #admin-view {
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 30px;
 }
@@ -109,7 +130,6 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 #btn-goto-admin { width: 100%; padding: 15px; background-color: #28a745; }
 #btn-goto-admin:hover { background-color: #218838; }
 
-/* ▼▼▼ ここから追加 ▼▼▼ */
 /* --- カレンダーコントロール --- */
 #calendar-controls {
     display: flex;
@@ -137,22 +157,60 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     border-color: #007bff;
 }
 
-/* --- カレンダーグリッド --- */
+/* ログイン画面と管理者画面で共通のカレンダースタイル */
+.calendar-controls-shared {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.calendar-controls-shared h3 {
+    margin: 0;
+    font-size: 1.2em;
+}
+.calendar-controls-shared button {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #007bff;
+    padding: 5px 10px;
+}
+.calendar-grid-shared {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-top: 1px solid #eee;
+    border-left: 1px solid #eee;
+}
+.calendar-grid-shared .calendar-header-cell, #calendar-grid .calendar-header-cell {
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 0;
+    background-color: #f8f9fa;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+}
+.calendar-grid-shared .calendar-day-cell {
+    min-height: 80px;
+    padding: 5px;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    box-sizing: border-box;
+}
+.calendar-grid-shared .calendar-day-cell:hover {
+    background-color: #f8f9fa;
+    cursor: default;
+}
+
+/* --- カレンダーグリッド (管理者画面) --- */
 #calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     border-top: 1px solid #ddd;
     border-left: 1px solid #ddd;
 }
-.calendar-header-cell {
-    font-weight: bold;
-    text-align: center;
-    padding: 8px 0;
-    background-color: #f8f9fa;
-    border-right: 1px solid #ddd;
-    border-bottom: 1px solid #ddd;
-}
-.calendar-day-cell {
+#calendar-grid .calendar-day-cell {
     min-height: 120px;
     padding: 8px;
     border-right: 1px solid #ddd;
@@ -162,9 +220,11 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     cursor: pointer;
     transition: background-color 0.2s;
 }
-.calendar-day-cell:hover {
-    background-color: #f8f9fa;
+#calendar-grid .calendar-day-cell:hover {
+    background-color: #f0f8ff;
 }
+
+/* --- 日付やイベントの共通スタイル --- */
 .calendar-day-cell.other-month .date-number {
     color: #ccc;
 }
@@ -194,6 +254,12 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     text-overflow: ellipsis;
     cursor: pointer;
 }
+#login-calendar-grid .calendar-event {
+    background-color: #e9ecef;
+    border-left-color: #6c757d;
+    cursor: default;
+}
+
 
 /* --- イベントモーダル --- */
 #event-modal-overlay {
@@ -203,7 +269,6 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.6);
-    display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -226,12 +291,12 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     flex-grow: 1;
 }
 #save-event-btn {
-    flex-grow: 2; /* 保存ボタンを少し大きくする */
+    flex-grow: 2;
 }
-#cancel-event-btn {
+#cancel-event-btn, #btn-back-to-main {
     background-color: #6c757d;
 }
-#cancel-event-btn:hover {
+#cancel-event-btn:hover, #btn-back-to-main:hover {
     background-color: #5a6268;
 }
 #delete-event-btn {
@@ -240,7 +305,6 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 #delete-event-btn:hover {
     background-color: #c82333;
 }
-/* ▲▲▲ ここまで追加 ▲▲▲ */
 
 /* --- 管理者画面のレイアウト --- */
 .admin-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
@@ -248,7 +312,13 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 .summary-box { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; line-height: 1.6; }
 .chart-container { position: relative; height: 350px; }
 #employee-table { width: 100%; border-collapse: collapse; }
-#employee-table th, #employee-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+#employee-table th, #employee-table td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: middle; }
 #employee-table th { background-color: #f2f2f2; }
-#btn-back-to-main { background-color: #6c757d; }
-#btn-back-to-main:hover { background-color: #5a6268; }
+.delete-employee-btn {
+    background-color: #dc3545;
+    padding: 5px 10px;
+    font-size: 0.9em;
+}
+.delete-employee-btn:hover {
+    background-color: #c82333;
+}

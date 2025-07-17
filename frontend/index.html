@@ -10,6 +10,21 @@
     <div id="app-container">
 
         <div id="login-view" class="view">
+            <div id="login-info-panel">
+                <div id="login-clock-date">
+                    <h2 id="login-time">00:00:00</h2>
+                    <p id="login-date">2025年7月17日 (木)</p>
+                </div>
+                <div class="panel">
+                    <div id="login-calendar-controls" class="calendar-controls-shared">
+                        <button id="login-prev-month-btn">&lt;</button>
+                        <h3 id="login-calendar-title">2025年 7月</h3>
+                        <button id="login-next-month-btn">&gt;</button>
+                    </div>
+                    <div id="login-calendar-grid" class="calendar-grid-shared">
+                        </div>
+                </div>
+            </div>
             <div id="login-form-panel">
                 <h1>ログイン</h1>
                 <div id="login-error" class="error-message"></div>
@@ -26,7 +41,6 @@
                 </form>
             </div>
         </div>
-
         <div id="main-view" class="view">
             <header class="main-header">
                 <div class="user-info">
@@ -60,7 +74,7 @@
                 <h1>管理者モード</h1>
                 <button id="btn-back-to-main">メイン画面に戻る</button>
             </header>
-
+            
             <div class="panel">
                 <h2>イベント管理</h2>
                 <div id="calendar-controls">
@@ -74,8 +88,7 @@
                         <button id="month-view-btn" class="active">月</button>
                     </div>
                 </div>
-                <div id="calendar-grid">
-                    </div>
+                <div id="calendar-grid"></div>
             </div>
             
             <div class="panel">
@@ -113,6 +126,7 @@
                                 <th>名前</th>
                                 <th>時給</th>
                                 <th>管理者</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -143,7 +157,7 @@
                     <div id="add-employee-message" class="message"></div>
                 </div>
             </div>
-            </div>
+        </div>
     </div>
 
     <div id="event-modal-overlay" class="view">

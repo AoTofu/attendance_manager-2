@@ -1,13 +1,28 @@
 import sqlite3
 import os
 from werkzeug.security import generate_password_hash
+from appdirs import user_data_dir # appdirsをインポート
 
-DB_FILE = 'database.db'
+# アプリケーション名と開発者名を定義
+APP_NAME = "AttendanceManager"
+APP_AUTHOR = "YourAppName" # 任意の名前でOK
+
+# appdirsを使って、OSに最適なデータ保存場所を取得
+data_dir = user_data_dir(APP_NAME, APP_AUTHOR)
+
+# フォルダが存在しない場合は作成
+os.makedirs(data_dir, exist_ok=True)
+
+# データベースファイルのフルパスを決定
+DB_FILE = os.path.join(data_dir, 'database.db')
+print(f"データベースの場所: {DB_FILE}") # デバッグ用にパスを表示
+
 
 def get_db_connection():
     """データベース接続を取得する"""
     conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row # カラム名でアクセスできるようにする
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def create_tables():
@@ -34,11 +49,10 @@ def create_tables():
             employee_id INTEGER NOT NULL,
             event_type TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (employee_id) REFERENCES employees (id)
+            FOREIGN KEY (employee_id) REFERENCES employees (id) ON DELETE CASCADE
         )
     ''')
 
-    # ▼▼▼ ここから追加 ▼▼▼
     # eventsテーブル
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS events (
@@ -51,7 +65,6 @@ def create_tables():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    # ▲▲▲ ここまで追加 ▲▲▲
     
     print("テーブルの準備ができました。")
     conn.commit()
@@ -62,7 +75,6 @@ def initialize_database():
     if not os.path.exists(DB_FILE):
         print(f"{DB_FILE} が見つかりません。新規作成します。")
         create_tables()
-        # --- 初回管理者ユーザーの作成 ---
         create_initial_admin()
     else:
         # 既存DBの場合でもテーブルの存在確認は毎回行う
@@ -75,7 +87,6 @@ def create_initial_admin():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # 管理者が一人もいない場合のみ作成する
     cursor.execute("SELECT id FROM employees WHERE is_admin = 1")
     if cursor.fetchone() is None:
         print("管理者ユーザーが存在しないため、初期管理者を作成します。")
