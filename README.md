@@ -1,3 +1,7 @@
-試しに作ってみました( ˆᴗˆ )
+従業員の管理ができる簡単なwebアプリ
 
-アルバイトの出勤管理などに使ってください( ^^) _旦~~
+main.pyを実行してください。
+
+管理者はadmin admin_passwordでログインできます
+
+<img width="994" height="748" alt="スクリーンショット 2025-07-17 11 43 28" src="https://github.com/user-attachments/assets/efd8d185-6d3b-4bc6-89e1-10fe5245687a" />
