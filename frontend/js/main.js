@@ -315,13 +315,24 @@ function handleLogin(e) {
     });
 }
 
+// ▼▼▼ ここから修正 ▼▼▼
 function handleManualLogout() {
     console.log("手動ログアウトを実行します。");
     stopInactivityObserver();
     window.pywebview.api.logout().then(() => {
+        // ユーザー情報をクリア
+        currentUser = null;
+        // 全てのビューの初期化フラグをリセット
+        isMainViewInitialized = false;
+        isAdminViewInitialized = false;
+        isLoginViewInitialized = false; 
+        // イベントキャッシュを完全にクリア
+        eventsCache = {};
+
         showView('login');
     });
 }
+// ▲▲▲ 修正 ▲▲▲
 
 function initializeMainView() {
     document.getElementById('user-name').textContent = currentUser.name;
