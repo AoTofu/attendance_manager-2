@@ -1,0 +1,6 @@
+Flask>=2.3
+pywebview>=4.4
+Werkzeug>=2.3
+appdirs>=1.4
+# Qt backend for pywebview (optional; required if you set WEBVIEW_GUI=qt)
+PySide6>=6.5

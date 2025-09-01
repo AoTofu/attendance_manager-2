@@ -2,13 +2,32 @@ import webview
 import os
 import sys
 import threading
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, send_from_directory
 from api import Api
-from database import initialize_database
+from database import initialize_database, data_dir
 
-# pywebviewが使用するGUIライブラリを明示的に指定する
-# これにより、macOSでの安定性が向上する場合がある
-webview.gui = 'qt'
+# pywebview の GUI バックエンドは環境により異なるため、
+# 明示指定が必要な場合のみ環境変数で指定可能にする（例: WEBVIEW_GUI=qt）
+logging.basicConfig(
+    level=os.getenv('LOG_LEVEL', 'INFO').upper(),
+    format='[%(asctime)s] %(levelname)s %(name)s: %(message)s'
+)
+
+# ファイルロガー（ローテーション）を追加
+try:
+    os.makedirs(os.path.join(data_dir, 'logs'), exist_ok=True)
+    file_handler = RotatingFileHandler(os.path.join(data_dir, 'logs', 'app.log'), maxBytes=2_000_000, backupCount=3)
+    file_handler.setLevel(os.getenv('FILE_LOG_LEVEL', 'INFO').upper())
+    file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(name)s: %(message)s'))
+    logging.getLogger().addHandler(file_handler)
+except Exception:
+    logging.getLogger(__name__).warning('Failed to initialize file logger')
+
+gui_backend = os.getenv('WEBVIEW_GUI')
+if gui_backend:
+    webview.gui = gui_backend
 
 def resolve_path(path):
     """

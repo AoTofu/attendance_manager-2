@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>勤務管理システム</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF" crossorigin="anonymous"></script>
 </head>
 <body>
     <div id="app-container">
@@ -48,6 +48,7 @@
                 </div>
                 <div class="header-controls">
                     <div id="current-time" class="time-display"></div>
+                    <button id="btn-change-password">パスワード変更</button>
                     <button id="btn-logout">ログアウト</button>
                 </div>
             </header>
@@ -189,6 +190,30 @@
                     <button type="button" id="delete-event-btn">削除</button>
                     <button type="submit" id="save-event-btn">保存</button>
                     <button type="button" id="cancel-event-btn">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="password-modal-overlay" class="view">
+        <div id="password-modal-content">
+            <h2>パスワード変更</h2>
+            <form id="password-form">
+                <div class="form-group">
+                    <label for="current-password">現在のパスワード</label>
+                    <input type="password" id="current-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">新しいパスワード（8文字以上）</label>
+                    <input type="password" id="new-password" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="new-password-confirm">新しいパスワード（確認）</label>
+                    <input type="password" id="new-password-confirm" required minlength="8">
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" id="save-password-btn">更新</button>
+                    <button type="button" id="cancel-password-btn">キャンセル</button>
                 </div>
             </form>
         </div>

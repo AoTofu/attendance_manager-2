@@ -5,6 +5,7 @@ let currentUser = null;
 let timeInterval = null;
 let attendanceChart = null;
 let inactivityTimer = null;
+let inactivityTimeoutMs = 30 * 1000; // 既定は30秒（起動後にサーバ設定で上書き）
 
 let isMainViewInitialized = false;
 let isAdminViewInitialized = false;
@@ -65,17 +66,17 @@ function showView(viewName) {
 
 // --- 自動ログアウト関連 ---
 function performAutoLogout() {
-    console.log("30秒間操作がなかったため、自動ログアウトします。");
+    console.log("一定時間操作がなかったため、自動ログアウトします。");
     clearTimeout(inactivityTimer);
     window.pywebview.api.logout().then(() => {
         showView('login');
-        alert('30秒間操作がなかったため、自動的にログアウトしました。');
+        alert('一定時間操作がなかったため、自動的にログアウトしました。');
     });
 }
 
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(performAutoLogout, 30 * 1000);
+    inactivityTimer = setTimeout(performAutoLogout, inactivityTimeoutMs);
 }
 
 function startInactivityObserver() {
@@ -397,19 +398,38 @@ function loadEmployees() {
 
             result.employees.forEach(emp => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${emp.id}</td>
-                    <td>${emp.name}</td>
-                    <td>${emp.hourly_wage.toLocaleString()}円</td>
-                    <td>${emp.is_admin ? '✔' : ''}</td>
-                    <td>
-                        <button class="delete-employee-btn" data-employee-id="${emp.id}">削除</button>
-                    </td>
-                `;
+
+                const tdId = document.createElement('td');
+                tdId.textContent = String(emp.id);
+                row.appendChild(tdId);
+
+                const tdName = document.createElement('td');
+                tdName.textContent = emp.name ?? '';
+                row.appendChild(tdName);
+
+                const tdWage = document.createElement('td');
+                const wage = (emp.hourly_wage ?? 0);
+                tdWage.textContent = `${Number(wage).toLocaleString()}円`;
+                row.appendChild(tdWage);
+
+                const tdAdmin = document.createElement('td');
+                tdAdmin.textContent = emp.is_admin ? '✔' : '';
+                row.appendChild(tdAdmin);
+
+                const tdActions = document.createElement('td');
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-employee-btn';
+                delBtn.dataset.employeeId = String(emp.id);
+                delBtn.textContent = '削除';
+                tdActions.appendChild(delBtn);
+                row.appendChild(tdActions);
+
                 tableBody.appendChild(row);
 
-                const option = `<option value="${emp.id}">${emp.name}</option>`;
-                employeeSelect.insertAdjacentHTML('beforeend', option);
+                const option = document.createElement('option');
+                option.value = String(emp.id);
+                option.textContent = emp.name ?? '';
+                employeeSelect.appendChild(option);
             });
         } else {
             alert(result.message);
@@ -644,5 +664,59 @@ window.addEventListener('pywebviewready', () => {
         endInput.value = formatDateForInput(endDate, isChecked);
     });
 
-    showView('login');
+    // 設定値を取得し、非アクティブ時間などを上書き
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.get_settings) {
+        window.pywebview.api.get_settings().then(result => {
+            if (result && result.success) {
+                const sec = result.settings?.inactivity_timeout_seconds;
+                if (typeof sec === 'number' && sec > 0) {
+                    inactivityTimeoutMs = sec * 1000;
+                }
+            }
+            showView('login');
+        }).catch(() => showView('login'));
+    } else {
+        showView('login');
+    }
+});
+
+// パスワード変更モーダル
+function openPasswordModal() {
+    document.getElementById('password-form').reset();
+    document.getElementById('password-modal-overlay').style.display = 'flex';
+}
+function closePasswordModal() {
+    document.getElementById('password-modal-overlay').style.display = 'none';
+}
+function handleChangePassword(e) {
+    e.preventDefault();
+    const current = document.getElementById('current-password').value;
+    const p1 = document.getElementById('new-password').value;
+    const p2 = document.getElementById('new-password-confirm').value;
+    if (p1 !== p2) {
+        alert('新しいパスワードが一致しません。');
+        return;
+    }
+    if (p1.length < 8) {
+        alert('新しいパスワードは8文字以上にしてください。');
+        return;
+    }
+    window.pywebview.api.change_password(current, p1).then(result => {
+        if (result && result.success) {
+            alert('パスワードを変更しました。');
+            closePasswordModal();
+        } else {
+            alert(result?.message || 'パスワード変更に失敗しました。');
+        }
+    });
+}
+
+// ヘッダーのボタンにバインド（pywebviewready後にDOMは取得済み）
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-change-password');
+    const cancel = document.getElementById('cancel-password-btn');
+    const form = document.getElementById('password-form');
+    if (btn) btn.addEventListener('click', openPasswordModal);
+    if (cancel) cancel.addEventListener('click', closePasswordModal);
+    if (form) form.addEventListener('submit', handleChangePassword);
 });
